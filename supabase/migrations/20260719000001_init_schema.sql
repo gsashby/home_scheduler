@@ -450,6 +450,23 @@ $$;
 revoke all on function public.zone_assignee(uuid) from public;
 grant execute on function public.zone_assignee(uuid) to authenticated;
 
+-- Convenience for the Today/Zones tabs: every zone with its computed
+-- current-cycle assignee in one round trip, instead of one zone_assignee()
+-- call per zone.
+create function public.zones_with_assignee()
+returns table (id uuid, name text, subzones text[], assigned_to uuid, assignee_id uuid)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select z.id, z.name, z.subzones, z.assigned_to, public.zone_assignee(z.id) as assignee_id
+  from zones z
+  order by z.created_at;
+$$;
+revoke all on function public.zones_with_assignee() from public;
+grant execute on function public.zones_with_assignee() to authenticated;
+
 -- Zones materialize as tasks on the assignee's list, one per rotation
 -- cycle. Idempotent — safe to call on every page load and from cron.
 create function public.ensure_zone_tasks()
@@ -1257,3 +1274,25 @@ begin
 end;
 $$;
 revoke all on function public.cron_generate_deadline_alerts() from public;
+
+-- =============================================================================
+-- Realtime: Supabase's supabase_realtime publication starts empty in new
+-- projects — tables must be added explicitly for postgres_changes
+-- subscriptions to receive anything. RLS still applies to what each client
+-- actually receives. Guarded so this migration also applies cleanly to a
+-- plain (non-Supabase) Postgres instance, which has no such publication.
+-- =============================================================================
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table
+      public.profiles,
+      public.calendar_events,
+      public.tasks,
+      public.subtasks,
+      public.zones,
+      public.zone_rotation,
+      public.jobs,
+      public.notifications;
+  end if;
+end $$;

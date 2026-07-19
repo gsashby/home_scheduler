@@ -1,8 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const [denied, setDenied] = useState(false);
+
+  useEffect(() => {
+    setDenied(new URLSearchParams(window.location.search).get("denied") === "1");
+  }, []);
+
   const signInWithGoogle = async () => {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
@@ -22,6 +29,11 @@ export default function LoginPage() {
             The family calendar, tasks, and chore zones — all in one place.
           </p>
         </div>
+        {denied && (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            That Google account isn&rsquo;t set up as a family member on this app.
+          </p>
+        )}
         <button
           type="button"
           onClick={signInWithGoogle}

@@ -4,6 +4,11 @@
 //   npx supabase gen types typescript --project-id <project-ref> > src/lib/supabase/database.types.ts
 // and diff against this file before overwriting — some hand-tuned bits
 // (function arg/return shapes) may need to be re-applied.
+//
+// Declared as a `type` (not `interface`) with an explicit `Relationships: []`
+// on every table — @supabase/postgrest-js's GenericSchema constraint needs
+// both to structurally match, or every query/rpc call silently degrades to
+// `never`/`undefined` argument types instead of a visible error.
 
 export type FamilyRole = "parent" | "kid";
 export type TaskStatus = "assigned" | "done" | "verified";
@@ -13,48 +18,139 @@ export type JobStatus = "open" | "taken" | "done" | "paid";
 export type NotifKind = "brief" | "deadline" | "nudge" | "update" | "sync" | "job";
 export type CalendarSharing = "family" | "parents" | "private";
 
-export interface Database {
+type ProfilesRow = {
+  id: string;
+  display_name: string;
+  role: FamilyRole;
+  color: string;
+  google_sync_enabled: boolean;
+  calendar_sharing: CalendarSharing;
+  created_at: string;
+};
+
+type SubjectsRow = { id: string; name: string; position: number; created_at: string };
+
+type CalendarEventsRow = {
+  id: string;
+  member_id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  source: EventSource;
+  google_calendar_id: string | null;
+  google_event_id: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type ZonesRow = {
+  id: string;
+  name: string;
+  subzones: string[];
+  assigned_to: string | null;
+  created_at: string;
+};
+
+type ZoneRotationRow = {
+  id: boolean;
+  start_date: string;
+  interval_days: number | null;
+  offset_cycles: number;
+  member_order: string[];
+};
+
+type ZoneDismissalsRow = { zone_id: string; cycle: number };
+
+type JobsRow = {
+  id: string;
+  title: string;
+  amount: number;
+  status: JobStatus;
+  taken_by: string | null;
+  task_id: string | null;
+  created_at: string;
+};
+
+type TasksRow = {
+  id: string;
+  title: string;
+  member_id: string;
+  category: TaskCategory;
+  subject_id: string | null;
+  date: string;
+  deadline: string | null;
+  remind_minutes: number;
+  status: TaskStatus;
+  created_by: string;
+  zone_id: string | null;
+  zone_cycle: number | null;
+  job_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type SubtasksRow = { id: string; task_id: string; title: string; done: boolean; position: number };
+
+type NotificationsRow = {
+  id: string;
+  to_profile_id: string;
+  kind: NotifKind;
+  text: string;
+  dedupe_key: string | null;
+  read: boolean;
+  created_at: string;
+};
+
+type PushSubscriptionsRow = {
+  id: string;
+  profile_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: string;
+};
+
+type Rel<Cols extends string[], Ref extends string, RefCols extends string[]> = {
+  foreignKeyName: string;
+  columns: Cols;
+  isOneToOne: boolean;
+  referencedRelation: Ref;
+  referencedColumns: RefCols;
+};
+
+type GoogleTokensRow = {
+  profile_id: string;
+  access_token: string;
+  refresh_token: string;
+  expiry: string;
+  calendar_id: string | null;
+  sync_token: string | null;
+  watch_channel_id: string | null;
+  watch_resource_id: string | null;
+  watch_expiration: string | null;
+  updated_at: string;
+};
+
+export type Database = {
   public: {
     Tables: {
       profiles: {
-        Row: {
-          id: string;
-          display_name: string;
-          role: FamilyRole;
-          color: string;
-          google_sync_enabled: boolean;
-          calendar_sharing: CalendarSharing;
-          created_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & {
-          id: string;
-          display_name: string;
-          role: FamilyRole;
-          color: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
+        Row: ProfilesRow;
+        Insert: Partial<ProfilesRow> & { id: string; display_name: string; role: FamilyRole; color: string };
+        Update: Partial<ProfilesRow>;
+        Relationships: [];
       };
       subjects: {
-        Row: { id: string; name: string; position: number; created_at: string };
-        Insert: Partial<Database["public"]["Tables"]["subjects"]["Row"]> & { name: string };
-        Update: Partial<Database["public"]["Tables"]["subjects"]["Row"]>;
+        Row: SubjectsRow;
+        Insert: Partial<SubjectsRow> & { name: string };
+        Update: Partial<SubjectsRow>;
+        Relationships: [];
       };
       calendar_events: {
-        Row: {
-          id: string;
-          member_id: string;
-          title: string;
-          date: string;
-          start_time: string;
-          end_time: string;
-          source: EventSource;
-          google_calendar_id: string | null;
-          google_event_id: string | null;
-          created_by: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["calendar_events"]["Row"]> & {
+        Row: CalendarEventsRow;
+        Insert: Partial<CalendarEventsRow> & {
           member_id: string;
           title: string;
           date: string;
@@ -62,134 +158,87 @@ export interface Database {
           end_time: string;
           created_by: string;
         };
-        Update: Partial<Database["public"]["Tables"]["calendar_events"]["Row"]>;
+        Update: Partial<CalendarEventsRow>;
+        Relationships: [
+          Rel<["member_id"], "profiles", ["id"]>,
+          Rel<["created_by"], "profiles", ["id"]>,
+        ];
       };
       zones: {
-        Row: {
-          id: string;
-          name: string;
-          subzones: string[];
-          assigned_to: string | null;
-          created_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["zones"]["Row"]> & { name: string };
-        Update: Partial<Database["public"]["Tables"]["zones"]["Row"]>;
+        Row: ZonesRow;
+        Insert: Partial<ZonesRow> & { name: string };
+        Update: Partial<ZonesRow>;
+        Relationships: [Rel<["assigned_to"], "profiles", ["id"]>];
       };
       zone_rotation: {
-        Row: {
-          id: boolean;
-          start_date: string;
-          interval_days: number | null;
-          offset_cycles: number;
-          member_order: string[];
-        };
-        Insert: Partial<Database["public"]["Tables"]["zone_rotation"]["Row"]> & { start_date: string };
-        Update: Partial<Database["public"]["Tables"]["zone_rotation"]["Row"]>;
+        Row: ZoneRotationRow;
+        Insert: Partial<ZoneRotationRow> & { start_date: string };
+        Update: Partial<ZoneRotationRow>;
+        Relationships: [];
       };
       zone_dismissals: {
-        Row: { zone_id: string; cycle: number };
-        Insert: { zone_id: string; cycle: number };
-        Update: Partial<Database["public"]["Tables"]["zone_dismissals"]["Row"]>;
+        Row: ZoneDismissalsRow;
+        Insert: ZoneDismissalsRow;
+        Update: Partial<ZoneDismissalsRow>;
+        Relationships: [Rel<["zone_id"], "zones", ["id"]>];
       };
       jobs: {
-        Row: {
-          id: string;
-          title: string;
-          amount: number;
-          status: JobStatus;
-          taken_by: string | null;
-          task_id: string | null;
-          created_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["jobs"]["Row"]> & { title: string; amount: number };
-        Update: Partial<Database["public"]["Tables"]["jobs"]["Row"]>;
+        Row: JobsRow;
+        Insert: Partial<JobsRow> & { title: string; amount: number };
+        Update: Partial<JobsRow>;
+        Relationships: [Rel<["taken_by"], "profiles", ["id"]>, Rel<["task_id"], "tasks", ["id"]>];
       };
       tasks: {
-        Row: {
-          id: string;
-          title: string;
-          member_id: string;
-          category: TaskCategory;
-          subject_id: string | null;
-          date: string;
-          deadline: string | null;
-          remind_minutes: number;
-          status: TaskStatus;
-          created_by: string;
-          zone_id: string | null;
-          zone_cycle: number | null;
-          job_id: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["tasks"]["Row"]> & {
+        Row: TasksRow;
+        Insert: Partial<TasksRow> & {
           title: string;
           member_id: string;
           category: TaskCategory;
           date: string;
           created_by: string;
         };
-        Update: Partial<Database["public"]["Tables"]["tasks"]["Row"]>;
+        Update: Partial<TasksRow>;
+        Relationships: [
+          Rel<["member_id"], "profiles", ["id"]>,
+          Rel<["created_by"], "profiles", ["id"]>,
+          Rel<["subject_id"], "subjects", ["id"]>,
+          Rel<["zone_id"], "zones", ["id"]>,
+          Rel<["job_id"], "jobs", ["id"]>,
+        ];
       };
       subtasks: {
-        Row: { id: string; task_id: string; title: string; done: boolean; position: number };
-        Insert: Partial<Database["public"]["Tables"]["subtasks"]["Row"]> & { task_id: string; title: string };
-        Update: Partial<Database["public"]["Tables"]["subtasks"]["Row"]>;
+        Row: SubtasksRow;
+        Insert: Partial<SubtasksRow> & { task_id: string; title: string };
+        Update: Partial<SubtasksRow>;
+        Relationships: [Rel<["task_id"], "tasks", ["id"]>];
       };
       notifications: {
-        Row: {
-          id: string;
-          to_profile_id: string;
-          kind: NotifKind;
-          text: string;
-          dedupe_key: string | null;
-          read: boolean;
-          created_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["notifications"]["Row"]> & {
-          to_profile_id: string;
-          kind: NotifKind;
-          text: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["notifications"]["Row"]>;
+        Row: NotificationsRow;
+        Insert: Partial<NotificationsRow> & { to_profile_id: string; kind: NotifKind; text: string };
+        Update: Partial<NotificationsRow>;
+        Relationships: [Rel<["to_profile_id"], "profiles", ["id"]>];
       };
       push_subscriptions: {
-        Row: {
-          id: string;
-          profile_id: string;
-          endpoint: string;
-          p256dh: string;
-          auth: string;
-          created_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["push_subscriptions"]["Row"]> & {
+        Row: PushSubscriptionsRow;
+        Insert: Partial<PushSubscriptionsRow> & {
           profile_id: string;
           endpoint: string;
           p256dh: string;
           auth: string;
         };
-        Update: Partial<Database["public"]["Tables"]["push_subscriptions"]["Row"]>;
+        Update: Partial<PushSubscriptionsRow>;
+        Relationships: [Rel<["profile_id"], "profiles", ["id"]>];
       };
       google_tokens: {
-        Row: {
-          profile_id: string;
-          access_token: string;
-          refresh_token: string;
-          expiry: string;
-          calendar_id: string | null;
-          sync_token: string | null;
-          watch_channel_id: string | null;
-          watch_resource_id: string | null;
-          watch_expiration: string | null;
-          updated_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["google_tokens"]["Row"]> & {
+        Row: GoogleTokensRow;
+        Insert: Partial<GoogleTokensRow> & {
           profile_id: string;
           access_token: string;
           refresh_token: string;
           expiry: string;
         };
-        Update: Partial<Database["public"]["Tables"]["google_tokens"]["Row"]>;
+        Update: Partial<GoogleTokensRow>;
+        Relationships: [Rel<["profile_id"], "profiles", ["id"]>];
       };
     };
     Views: Record<string, never>;
@@ -199,6 +248,10 @@ export interface Database {
       cycle_num: { Args: Record<string, never>; Returns: number };
       next_rotation_date: { Args: Record<string, never>; Returns: string | null };
       zone_assignee: { Args: { p_zone_id: string }; Returns: string | null };
+      zones_with_assignee: {
+        Args: Record<string, never>;
+        Returns: { id: string; name: string; subzones: string[]; assigned_to: string | null; assignee_id: string | null }[];
+      };
       ensure_zone_tasks: { Args: Record<string, never>; Returns: void };
       rotate_now: { Args: Record<string, never>; Returns: void };
       set_zone_interval: { Args: { p_interval_days: number | null }; Returns: void };
@@ -248,4 +301,4 @@ export interface Database {
       calendar_sharing: CalendarSharing;
     };
   };
-}
+};
