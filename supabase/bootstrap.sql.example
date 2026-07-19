@@ -1,0 +1,40 @@
+-- ONE-TIME production bootstrap. Do not commit a filled-in copy of this
+-- file (it would contain real emails/UUIDs) — it's a template to run by
+-- hand in the Supabase SQL editor, once, after the real setup steps below.
+--
+-- 1. Deploy the migrations (supabase db push) against your real project.
+-- 2. Have all 5 family members sign in once with Google through the app's
+--    /login page. Each sign-in creates a row in auth.users but — on
+--    purpose — no row in public.profiles yet (see is_member() in the
+--    schema: no profile row means no access).
+-- 3. Find each person's auth.users.id:
+--      select id, email from auth.users order by created_at;
+-- 4. Copy this file, fill in the real ids below, and run it once in the
+--    Supabase SQL editor (as the postgres/service role, which bypasses RLS).
+
+insert into public.profiles (id, display_name, role, color) values
+  ('<dad-auth-uid>',   'Dad',   'parent', '#111827'),
+  ('<mom-auth-uid>',   'Mom',   'parent', '#d4a900'),
+  ('<sara-auth-uid>',  'Sara',  'kid',    '#ec4899'),
+  ('<david-auth-uid>', 'David', 'kid',    '#3b82f6'),
+  ('<jj-auth-uid>',    'JJ',    'kid',    '#22c55e');
+
+insert into public.subjects (name, position) values
+  ('Math', 0), ('Reading', 1), ('Science', 2), ('Other', 3);
+
+-- Kid rotation order for chore zones — fixed here, no UI to change it later
+-- (matches the approved prototype, which has none either).
+insert into public.zone_rotation (start_date, interval_days, offset_cycles, member_order) values
+  (date_trunc('week', current_date)::date, 7, 0, array[
+    '<sara-auth-uid>'::uuid,
+    '<david-auth-uid>'::uuid,
+    '<jj-auth-uid>'::uuid
+  ]);
+
+-- Starter zones — edit or add more later from the Zones tab as a parent.
+insert into public.zones (name, subzones) values
+  ('Kitchen', array['Dishes & counters','Sweep + mop floor','Take out trash']),
+  ('Bathrooms', array['Sinks & mirrors','Toilets','Empty trash']),
+  ('Living room + hallway', array['Vacuum','Dust shelves','Tidy shoes & coats']);
+
+select public.cron_ensure_zone_tasks();

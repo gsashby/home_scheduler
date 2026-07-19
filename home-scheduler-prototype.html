@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Home Scheduler</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1c2330; --muted:#6b7480; --line:#e4e7ec;
+    --accent:#4f46e5; --accent-soft:#eef2ff; --ok:#16a34a; --warn:#d97706; --danger:#dc2626;
+    --r:12px; --shadow:0 1px 3px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box; margin:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select,textarea{font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .app{max-width:1100px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+
+  /* header */
+  header{position:sticky;top:0;z-index:20;background:rgba(246,247,249,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 16px}
+  .hrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .logo{font-weight:800;font-size:17px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+  .logo .dot{width:10px;height:10px;border-radius:3px;background:var(--accent);display:inline-block}
+  .spacer{flex:1}
+  .proto{font-size:11px;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:99px;padding:2px 9px}
+  .who{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .who .lbl{font-size:12px;color:var(--muted);margin-right:2px}
+  .avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;border:2px solid transparent;position:relative}
+  .avatar.me{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+  .avatar .role{position:absolute;bottom:-4px;right:-4px;font-size:9px;background:#fff;border:1px solid var(--line);border-radius:99px;padding:0 3px;color:var(--muted)}
+  .bell{position:relative;width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:17px}
+  .bell .badge{position:absolute;top:-5px;right:-5px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:99px;min-width:17px;height:17px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+  /* nav */
+  nav{display:flex;gap:4px;padding:8px 16px 0;overflow-x:auto}
+  nav button{padding:8px 14px;border-radius:10px 10px 0 0;font-weight:600;font-size:13.5px;color:var(--muted);white-space:nowrap}
+  nav button.active{background:#fff;color:var(--ink);border:1px solid var(--line);border-bottom-color:#fff}
+  main{flex:1;padding:16px;padding-bottom:40px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+  .card h2{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card h2 .sub{font-weight:400;font-size:12px;color:var(--muted)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--accent);color:#fff;font-weight:600;font-size:13.5px;padding:8px 14px;border-radius:9px}
+  .btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ok{background:var(--ok)} .btn.warn{background:var(--warn)} .btn.dng{background:var(--danger)}
+  .btn.sm{padding:5px 10px;font-size:12.5px;border-radius:7px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip .sw{width:10px;height:10px;border-radius:50%}
+  .tag{font-size:11px;font-weight:600;border-radius:6px;padding:2px 7px;background:var(--accent-soft);color:var(--accent)}
+  .tag.g{background:#e8f5e9;color:#2e7d32}
+  .muted{color:var(--muted);font-size:13px}
+  .empty{color:var(--muted);font-size:13.5px;padding:14px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+
+  /* calendar */
+  .calbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{padding:7px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+  .seg button.active{background:var(--ink);color:#fff}
+  .grid{display:grid;gap:8px}
+  .daycol{background:#fff;border:1px solid var(--line);border-radius:10px;min-height:120px;padding:8px;cursor:pointer}
+  .daycol.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .daycol h4{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between}
+  .daycol h4 b{color:var(--ink)}
+  .ev{border-radius:7px;padding:4px 7px;font-size:12px;font-weight:600;margin-bottom:4px;color:#fff;line-height:1.3;overflow:hidden}
+  .ev small{display:block;font-weight:500;opacity:.85;font-size:10.5px}
+  .ev .gm{font-size:9px;background:rgba(255,255,255,.35);border-radius:4px;padding:0 3px;margin-left:4px}
+  .ev.task{border:none;opacity:.92}
+  .ev.task::before{content:"☑ ";opacity:.9}
+  .dayview .slot{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .dayview .slot .t{width:62px;font-size:12px;color:var(--muted);padding-top:3px;flex-shrink:0}
+
+  /* tasks */
+  .task{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fff;border-left-width:5px}
+  .task .top{display:flex;gap:8px;align-items:flex-start}
+  .task .title{font-weight:700;font-size:14.5px}
+  .task .meta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .task .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .sub{display:flex;gap:8px;align-items:center;font-size:13.5px;padding:4px 0 4px 4px}
+  .sub input{width:16px;height:16px;accent-color:var(--ok)}
+  .sub.done span{text-decoration:line-through;color:var(--muted)}
+  .st{font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px}
+  .st.assigned{background:#fff7ed;color:#c2410c}
+  .st.done{background:#eff6ff;color:#1d4ed8}
+  .st.verified{background:#ecfdf5;color:#047857}
+  .overdue{color:var(--danger);font-weight:700}
+
+  /* zones */
+  .zone{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fff}
+  .zone .zn{font-weight:700;flex:1}
+  .assg{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+  .assg .sw{width:12px;height:12px;border-radius:50%}
+
+  /* jobs */
+  .job{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fff;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .job .amt{font-weight:800;font-size:16px;color:var(--ok)}
+  .job .jt{font-weight:700;flex:1;min-width:140px}
+
+  /* notifications drawer */
+  .drawer{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:50;display:none}
+  .drawer.open{display:block}
+  .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:min(400px,92vw);background:#fff;padding:16px;overflow-y:auto;box-shadow:-8px 0 30px rgba(0,0,0,.15)}
+  .notif{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13.5px}
+  .notif.unread{border-left:4px solid var(--accent);background:var(--accent-soft)}
+  .notif .nt{font-size:11px;color:var(--muted);margin-top:3px}
+  .notif .kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
+
+  /* toast */
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;font-size:13.5px;font-weight:600;opacity:0;transition:opacity .25s;z-index:99;pointer-events:none;max-width:90vw;text-align:center}
+  #toast.show{opacity:1}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:60;display:none;align-items:center;justify-content:center;padding:16px}
+  .modal.open{display:flex}
+  .modal .box{background:#fff;border-radius:14px;padding:20px;width:min(460px,100%);max-height:88vh;overflow-y:auto}
+  .modal h3{margin-bottom:14px;font-size:16px}
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px;color:var(--muted)}
+  .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  .brief-item{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .brief-item:last-child{border-bottom:none}
+  .brief-item .sw{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+  .brief-item .bt{width:64px;font-size:12px;color:var(--muted);flex-shrink:0}
+
+  table.share{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.share th,table.share td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  table.share th{font-size:12px;color:var(--muted)}
+
+  @media (max-width:640px){
+    .f2{grid-template-columns:1fr}
+    .grid.wk{grid-template-columns:1fr !important}
+    main{padding:12px}
+    .who .lbl{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="hrow">
+      <div class="logo"><span class="dot"></span>Home Scheduler <span class="proto">prototype</span></div>
+      <div class="spacer"></div>
+      <div class="who" id="who"></div>
+      <button class="bell" id="bellBtn" title="Notifications">🔔<span class="badge" id="bellBadge" style="display:none">0</span></button>
+    </div>
+    <nav id="nav"></nav>
+  </header>
+  <main id="main"></main>
+</div>
+
+<div class="drawer" id="drawer">
+  <div class="panel">
+    <div class="row" style="margin-bottom:12px">
+      <h2 style="font-size:16px;flex:1">Notifications</h2>
+      <button class="btn sm sec" onclick="markAllRead()">Mark all read</button>
+      <button class="btn sm sec" onclick="toggleDrawer(false)">✕</button>
+    </div>
+    <div id="notifList"></div>
+  </div>
+</div>
+
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ================= data ================= */
+const LS_KEY = "homescheduler-proto-v1";
+const CATS = { "zone":"Zone / Chore","work":"Work","home":"Home","personal":"Personal","goal":"Goal" };
+const DEFAULT_SUBJECTS = [{id:"math",name:"Math"},{id:"reading",name:"Reading"},{id:"science",name:"Science"},{id:"other",name:"Other"}];
+function iso(d){ return d.toISOString().slice(0,10); }
+function today(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function dISO(n){ return iso(addDays(today(),n)); }
+function mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
+
+let S = null; // state
+let currentUser = "mom";
+let tab = "today";
+let calView = "week";
+let calAnchor = iso(today());
+let calFilter = null; // memberId or null=everyone
+
+function seed(){
+  const t0=dISO(0);
+  return {
+    members:[
+      {id:"dad",  name:"Dad",  role:"parent", color:"#111827"},
+      {id:"mom",  name:"Mom",  role:"parent", color:"#d4a900"},
+      {id:"sara", name:"Sara", role:"kid",    color:"#ec4899"},
+      {id:"david",name:"David",role:"kid",    color:"#3b82f6"},
+      {id:"jj",   name:"JJ",   role:"kid",    color:"#22c55e"}
+    ],
+    subjects: JSON.parse(JSON.stringify(DEFAULT_SUBJECTS)),
+    googleSync:{dad:true, mom:true, sara:true, david:true, jj:true},
+    sharing:{dad:"family", mom:"family", sara:"family", david:"family", jj:"family"},
+    events:[
+      {id:"e1", title:"Dentist — Sara & JJ", memberId:"mom", date:t0, start:"14:00", end:"15:00", source:"google"},
+      {id:"e2", title:"Welding program", memberId:"david", date:t0, start:"09:00", end:"12:00", source:"app"},
+      {id:"e3", title:"Welding program", memberId:"david", date:dISO(2), start:"09:00", end:"12:00", source:"app"},
+      {id:"e4", title:"Work shift — Hardware store", memberId:"david", date:dISO(1), start:"16:00", end:"20:00", source:"app"},
+      {id:"e5", title:"Soccer practice", memberId:"sara", date:dISO(2), start:"17:00", end:"18:30", source:"app"},
+      {id:"e6", title:"Birthday party (Max)", memberId:"jj", date:dISO(5), start:"13:00", end:"16:00", source:"app"},
+      {id:"e7", title:"Flight to Denver", memberId:"dad", date:dISO(3), start:"08:00", end:"10:00", source:"google"},
+      {id:"e8", title:"Church group", memberId:"mom", date:dISO(2), start:"19:00", end:"20:30", source:"app"}
+    ],
+    tasks:[
+      {id:"t1", title:"Math", memberId:"sara", cat:"school-math", date:t0, deadline:"16:00", remind:60, status:"assigned", createdBy:"mom",
+        subtasks:[{id:"s1",title:"Do 5.1",done:true},{id:"s2",title:"Do 5.2",done:false}]},
+      {id:"t2", title:"Practice piano — 30 min", memberId:"sara", cat:"personal", date:t0, deadline:"", remind:0, status:"assigned", createdBy:"mom", subtasks:[]},
+      {id:"t3", title:"Apply to 2 summer jobs", memberId:"david", cat:"work", date:t0, deadline:"", remind:0, status:"done", createdBy:"mom", subtasks:[]},
+      {id:"t4", title:"Reading — 20 minutes", memberId:"jj", cat:"school-reading", date:t0, deadline:"17:00", remind:30, status:"assigned", createdBy:"mom", subtasks:[]},
+      {id:"t5", title:"Feed the dog", memberId:"jj", cat:"home", date:dISO(-1), deadline:"", remind:0, status:"assigned", createdBy:"dad", subtasks:[]},
+      {id:"t6", title:"Welding homework — safety quiz", memberId:"david", cat:"school-other", date:dISO(1), deadline:"", remind:0, status:"assigned", createdBy:"mom", subtasks:[]},
+      {id:"t7", title:"Get lifeguard certification", memberId:"david", cat:"goal", date:dISO(4), deadline:"", remind:0, status:"assigned", createdBy:"david", subtasks:[]},
+      {id:"t8", title:"Job: Clean the garage shelves ($20)", memberId:"david", cat:"work", date:t0, deadline:"", remind:0, status:"assigned", createdBy:"david", subtasks:[], jobId:"j2"}
+    ],
+    zones:[
+      {id:"z1", name:"Kitchen", subzones:["Dishes & counters","Sweep + mop floor","Take out trash"]},
+      {id:"z2", name:"Bathrooms", subzones:["Sinks & mirrors","Toilets","Empty trash"]},
+      {id:"z3", name:"Living room + hallway", subzones:["Vacuum","Dust shelves","Tidy shoes & coats"]}
+    ],
+    zoneRotation:{ start: iso(mondayOf(today())), intervalDays:7, offset:0, members:["sara","david","jj"] },
+    jobs:[
+      {id:"j1", title:"Wash the car (inside + out)", amount:10, status:"open", takenBy:null},
+      {id:"j2", title:"Clean the garage shelves", amount:20, status:"taken", takenBy:"david", taskId:"t8"},
+      {id:"j3", title:"Weed the flower beds", amount:8, status:"done", takenBy:"sara"}
+    ],
+    notifs:[],
+    briefSent:{}
+  };
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{ const raw=localStorage.getItem(LS_KEY); if(raw){ S=JSON.parse(raw);
+    if(!S.subjects) S.subjects=JSON.parse(JSON.stringify(DEFAULT_SUBJECTS)); // migrate older saves
+    (S.zones||[]).forEach(z=>{ if(!z.subzones) z.subzones=[]; });
+    return; } }catch(e){}
+  S=seed();
+}
+function resetDemo(){ localStorage.removeItem(LS_KEY); S=seed(); toast("Demo data reset"); renderAll(); }
+
+/* ================= helpers ================= */
+const uid=()=> "x"+Math.random().toString(36).slice(2,9);
+const M = id => S.members.find(m=>m.id===id);
+const me = ()=> M(currentUser);
+const isParent = ()=> me().role==="parent";
+const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function fmtDay(isoStr){
+  const d=new Date(isoStr+"T00:00:00");
+  return d.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"});
+}
+function relDay(isoStr){
+  const t=iso(today());
+  if(isoStr===t) return "Today";
+  if(isoStr===dISO(1)) return "Tomorrow";
+  if(isoStr===dISO(-1)) return "Yesterday";
+  return fmtDay(isoStr);
+}
+function toast(msg){
+  const el=document.getElementById("toast");
+  el.textContent=msg; el.classList.add("show");
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),2600);
+}
+function notify(toId, kind, text){
+  S.notifs.unshift({id:uid(), to:toId, kind, text, time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}), read:false});
+  save(); renderHeader();
+  if(toId===currentUser) toast("🔔 "+text);
+}
+function notifyParents(kind,text){ S.members.filter(m=>m.role==="parent").forEach(p=>notify(p.id,kind,text)); }
+
+/* zone rotation math */
+function cycleNum(){
+  const r=S.zoneRotation;
+  if(r.intervalDays==="manual") return r.offset; // manual: only "Rotate now" advances the cycle
+  const days=Math.floor((today()-new Date(r.start+"T00:00:00"))/86400000);
+  return Math.floor(days/r.intervalDays)+r.offset;
+}
+function zoneAssignee(zoneIdx){
+  const z=S.zones[zoneIdx];
+  if(z && z.assignedTo) return z.assignedTo; // parent override pins this zone to one person
+  const kids=S.zoneRotation.members;
+  return kids[((zoneIdx+cycleNum())%kids.length+kids.length)%kids.length];
+}
+/* zones materialize as tasks on the assignee's list, one per rotation cycle */
+function ensureZoneTasks(){
+  const c=cycleNum();
+  S.zoneDone=S.zoneDone||{}; // zoneId:cycle -> completed/dismissed, so tasks don't regenerate
+  // clear stale incomplete zone tasks from previous cycles or deleted zones
+  S.tasks=S.tasks.filter(t=>!t.zoneId || t.status==="verified" || (t.zoneCycle===c && S.zones.some(z=>z.id===t.zoneId)));
+  S.zones.forEach((z,i)=>{
+    const who=zoneAssignee(i);
+    if(S.zoneDone[z.id+":"+c]) return;
+    const t=S.tasks.find(x=>x.zoneId===z.id && x.zoneCycle===c);
+    if(!t){
+      S.tasks.push({id:uid(), title:"Zone: "+z.name, memberId:who, cat:"zone", date:dISO(0),
+        deadline:"", remind:0, status:"assigned", createdBy:who, zoneId:z.id, zoneCycle:c,
+        subtasks:(z.subzones||[]).map(s=>({id:uid(),title:s,done:false}))});
+    } else if(t.memberId!==who && t.status==="assigned"){ t.memberId=who; }
+  });
+  save();
+}
+function nextRotationDate(){
+  const r=S.zoneRotation;
+  if(r.intervalDays==="manual") return "when you press Rotate now";
+  const days=Math.floor((today()-new Date(r.start+"T00:00:00"))/86400000);
+  const next=(Math.floor(days/r.intervalDays)+1)*r.intervalDays;
+  return relDay(iso(addDays(new Date(r.start+"T00:00:00"),next)));
+}
+
+/* visible tasks per access control: kids see only their own */
+function visibleTasks(){
+  return isParent() ? S.tasks : S.tasks.filter(t=>t.memberId===currentUser);
+}
+function catLabel(c){
+  if(c && c.indexOf("school-")===0){
+    const s=S.subjects.find(x=>"school-"+x.id===c);
+    return "School · "+(s?s.name:"Other");
+  }
+  return CATS[c]||c;
+}
+function catOptions(){
+  return S.subjects.map(s=>`<option value="school-${s.id}">School · ${esc(s.name)}</option>`).join("")
+       + Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+}
+
+/* ================= header / nav ================= */
+function renderHeader(){
+  const who=document.getElementById("who");
+  who.innerHTML = '<span class="lbl">Viewing as:</span>' + S.members.map(m=>
+    `<button class="avatar ${m.id===currentUser?"me":""}" style="background:${m.color}" title="${m.name} (${m.role})" onclick="switchUser('${m.id}')">${m.name[0]}<span class="role">${m.role==="parent"?"P":"K"}</span></button>`
+  ).join("");
+  const unread=S.notifs.filter(n=>n.to===currentUser && !n.read).length;
+  const b=document.getElementById("bellBadge");
+  b.style.display=unread?"flex":"none"; b.textContent=unread;
+
+  const tabs=[["today","Today"],["calendar","Calendar"],["tasks","Tasks"]];
+  if(isParent()) tabs.push(["zones","Zones"]); // zone management is parent-only; kids get zones as tasks
+  tabs.push(["jobs","Job Board"]);
+  if(isParent()) tabs.push(["settings","Settings"]); // settings are parent-only
+  document.getElementById("nav").innerHTML = tabs.map(([id,l])=>
+    `<button class="${tab===id?"active":""}" onclick="setTab('${id}')">${l}</button>`).join("");
+}
+function switchUser(id){
+  currentUser=id;
+  if((tab==="zones"||tab==="settings") && !isParent()) tab="tasks"; // parent-only tabs
+  if(tab==="tasks" || tab==="settings"){ /* keep tab; content adapts to role */ }
+  toast("Now viewing as "+M(id).name+" ("+M(id).role+") — simulated sign-in");
+  renderAll();
+}
+function setTab(t){ tab=t; renderAll(); }
+
+/* ================= notifications drawer ================= */
+function toggleDrawer(open){
+  const d=document.getElementById("drawer");
+  d.classList.toggle("open", open===undefined? !d.classList.contains("open") : open);
+  renderNotifs();
+}
+document.getElementById("bellBtn").onclick=()=>toggleDrawer();
+document.getElementById("drawer").addEventListener("click",e=>{ if(e.target.id==="drawer") toggleDrawer(false); });
+function renderNotifs(){
+  const mine=S.notifs.filter(n=>n.to===currentUser);
+  const kindLbl={brief:"Daily brief", deadline:"Deadline alert", nudge:"Nudge", update:"Update", sync:"Google sync", job:"Job board"};
+  document.getElementById("notifList").innerHTML = mine.length? mine.map(n=>
+    `<div class="notif ${n.read?"":"unread"}"><div class="kind">${kindLbl[n.kind]||n.kind}</div>${esc(n.text)}<div class="nt">${n.time}</div></div>`
+  ).join("") : '<div class="empty">No notifications for '+esc(me().name)+' yet.</div>';
+}
+function markAllRead(){ S.notifs.forEach(n=>{ if(n.to===currentUser) n.read=true; }); save(); renderHeader(); renderNotifs(); }
+
+/* deadline alert simulation: generate alerts for today's tasks with deadlines */
+function generateDeadlineAlerts(){
+  const now=new Date();
+  S.tasks.forEach(t=>{
+    if(t.status!=="assigned" || !t.deadline || t.date!==dISO(0)) return;
+    const [h,m]=t.deadline.split(":").map(Number);
+    const dl=new Date(); dl.setHours(h,m,0,0);
+    const diffMin=(dl-now)/60000;
+    const key="dl-"+t.id;
+    if(diffMin>0 && diffMin<= (t.remind||60) && !S.notifs.some(n=>n.key===key)){
+      const n={id:uid(), key, to:t.memberId, kind:"deadline", text:`"${t.title}" is due at ${t.deadline} (${Math.round(diffMin)} min from now)`, time:now.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}), read:false};
+      S.notifs.unshift(n);
+    }
+  });
+  save();
+}
+
+/* daily brief */
+function briefLinesFor(mid){
+  const evs=S.events.filter(e=>e.date===dISO(0) && e.memberId===mid);
+  const tks=S.tasks.filter(t=>t.date<=dISO(0) && t.memberId===mid && t.status!=="verified");
+  const zones=S.zones.map((z,i)=>({z,who:zoneAssignee(i)})).filter(x=>x.who===mid);
+  const parts=[];
+  if(evs.length) parts.push(evs.length+" event"+(evs.length>1?"s":""));
+  if(tks.length) parts.push(tks.length+" task"+(tks.length>1?"s":""));
+  if(zones.length) parts.push("zone: "+zones.map(x=>x.z.name).join(", "));
+  return parts.length? parts.join(" · ") : "nothing scheduled — free day!";
+}
+function sendBriefAll(){
+  S.members.forEach(m=> notify(m.id,"brief", "Good morning "+m.name+"! Today: "+briefLinesFor(m.id)));
+  S.briefSent[dISO(0)]=true; save();
+  toast("Daily brief sent to all 5 family members");
+  renderAll();
+}
+
+/* ================= TODAY tab ================= */
+function renderToday(){
+  const mid=currentUser;
+  const evs=S.events.filter(e=>e.date===dISO(0)).sort((a,b)=>a.start<b.start?-1:1);
+  const myEvs=evs.filter(e=>e.memberId===mid);
+  const othEvs=evs.filter(e=>e.memberId!==mid);
+  const myTasks=S.tasks.filter(t=>t.memberId===mid && t.date<=dISO(0) && t.status!=="verified");
+  const zones=S.zones.map((z,i)=>({z,who:zoneAssignee(i)}));
+  const myZones=zones.filter(x=>x.who===mid);
+
+  const evLine = e=>{ const m=M(e.memberId); return `<div class="brief-item"><span class="sw" style="background:${m.color}"></span><span class="bt">${e.start}</span><span><b>${esc(e.title)}</b> — ${m.name}${e.source==="google"?' <span class="tag g">Google</span>':""}</span></div>`; };
+  const tkLine = t=>`<div class="brief-item"><span class="sw" style="background:${M(t.memberId).color}"></span><span class="bt">${t.deadline?("by "+t.deadline):"today"}</span><span><b>${esc(t.title)}</b> <span class="muted">· ${catLabel(t.cat)}</span>${t.date<dISO(0)?' <span class="overdue">overdue</span>':""}</span></div>`;
+
+  let html = `
+  <div class="card">
+    <h2>☀️ Daily brief — ${fmtDay(dISO(0))} <span class="sub">what's going on today for ${esc(me().name)}</span></h2>
+    ${myEvs.length||myTasks.length||myZones.length ? "" : '<div class="empty">Nothing on your plate today 🎉</div>'}
+    ${myEvs.map(evLine).join("")}
+    ${myTasks.map(tkLine).join("")}
+    ${myZones.map(x=>`<div class="brief-item"><span class="sw" style="background:${me().color}"></span><span class="bt">zone</span><span><b>${esc(x.z.name)}</b> is your zone this week</span></div>`).join("")}
+  </div>
+  <div class="card">
+    <h2>👨‍👩‍👧‍👦 Where everyone is today</h2>
+    ${othEvs.length? othEvs.map(evLine).join("") : '<div class="empty">No one else has events today.</div>'}
+  </div>`;
+  if(isParent()){
+    html += `<div class="card"><h2>📣 Parent tools</h2>
+      <div class="row">
+        <button class="btn" onclick="sendBriefAll()">Send daily brief to everyone</button>
+        <span class="muted">${S.briefSent[dISO(0)]?"✓ Brief already sent today (would auto-send at 7:00 AM in the real app)":"In the real app this fires automatically each morning."}</span>
+      </div></div>`;
+  }
+  return html;
+}
+
+/* ================= CALENDAR tab ================= */
+function itemsForDay(dateStr){
+  let evs=S.events.filter(e=>e.date===dateStr);
+  let tks=S.tasks.filter(t=>t.date===dateStr && t.status!=="verified");
+  if(calFilter){ evs=evs.filter(e=>e.memberId===calFilter); tks=tks.filter(t=>t.memberId===calFilter); }
+  if(!isParent()){ tks=tks.filter(t=>t.memberId===currentUser); } // kids see only own tasks
+  evs.sort((a,b)=>a.start<b.start?-1:1);
+  return {evs,tks};
+}
+function renderCalendar(){
+  const views=[["day","Day"],["3day","3-Day"],["week","Week"]];
+  const anchor=new Date(calAnchor+"T00:00:00");
+  let days=[];
+  if(calView==="week"){ const mon=mondayOf(anchor); for(let i=0;i<7;i++) days.push(iso(addDays(mon,i))); }
+  else if(calView==="3day"){ for(let i=0;i<3;i++) days.push(iso(addDays(anchor,i))); }
+  else days=[calAnchor];
+
+  const step = calView==="week"?7 : calView==="3day"?3 : 1;
+
+  let html=`<div class="calbar">
+    <div class="seg">${views.map(([v,l])=>`<button class="${calView===v?"active":""}" onclick="calView='${v}';renderAll()">${l}</button>`).join("")}</div>
+    <button class="btn sm sec" onclick="calShift(${-step})">‹</button>
+    <button class="btn sm sec" onclick="calAnchor='${iso(today())}';renderAll()">Today</button>
+    <button class="btn sm sec" onclick="calShift(${step})">›</button>
+    <div class="spacer"></div>
+    <button class="btn sm" onclick="openEventModal()">+ Add event</button>
+  </div>
+  <div class="row" style="margin-bottom:12px">
+    <button class="chip ${!calFilter?"on":""}" onclick="calFilter=null;renderAll()">Everyone</button>
+    ${S.members.map(m=>`<button class="chip ${calFilter===m.id?"on":""}" onclick="calFilter='${m.id}';renderAll()"><span class="sw" style="background:${m.color}"></span>${m.name}</button>`).join("")}
+  </div>`;
+
+  if(calView==="day"){
+    const {evs,tks}=itemsForDay(days[0]);
+    html+=`<div class="card dayview"><h2>${relDay(days[0])} <span class="sub">${fmtDay(days[0])}</span></h2>`;
+    if(!evs.length && !tks.length) html+='<div class="empty">Nothing scheduled.</div>';
+    html+= evs.map(e=>{ const m=M(e.memberId); return `<div class="slot"><div class="t">${e.start}–${e.end}</div><div class="ev" style="background:${m.color};flex:1">${esc(e.title)}${e.source==="google"?'<span class="gm">G</span>':""}<small>${m.name}</small></div></div>`; }).join("");
+    html+= tks.map(t=>{ const m=M(t.memberId); return `<div class="slot"><div class="t">${t.deadline||"all day"}</div><div class="ev task" style="background:${m.color};flex:1">${esc(t.title)}<small>${m.name} · ${catLabel(t.cat)}</small></div></div>`; }).join("");
+    html+="</div>";
+  } else {
+    const cols = calView==="week" ? "repeat(7,1fr)" : "repeat(3,1fr)";
+    html+=`<div class="grid wk" style="grid-template-columns:${cols}">`;
+    html+= days.map(d=>{
+      const {evs,tks}=itemsForDay(d);
+      const isToday=d===iso(today());
+      return `<div class="daycol ${isToday?"today":""}" onclick="calView='day';calAnchor='${d}';renderAll()" title="Open ${relDay(d)}">
+        <h4><b>${new Date(d+"T00:00:00").toLocaleDateString(undefined,{weekday:"short"})}</b><span>${new Date(d+"T00:00:00").getDate()}</span></h4>
+        ${evs.map(e=>`<div class="ev" style="background:${M(e.memberId).color}">${e.start} ${esc(e.title)}${e.source==="google"?'<span class="gm">G</span>':""}</div>`).join("")}
+        ${tks.map(t=>`<div class="ev task" style="background:${M(t.memberId).color}">${esc(t.title)}</div>`).join("")}
+        ${!evs.length&&!tks.length?'<div class="muted" style="font-size:11px">—</div>':""}
+      </div>`;
+    }).join("");
+    html+="</div><div class='muted' style='margin-top:6px'>Tap any day to drill in · ☑ = task · G = synced with Google Calendar</div>";
+  }
+  return html;
+}
+function calShift(n){ calAnchor=iso(addDays(new Date(calAnchor+"T00:00:00"),n)); renderAll(); }
+
+/* add event modal */
+function openEventModal(){
+  const ownerSel = isParent()
+    ? `<select id="evOwner">${S.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join("")}</select>`
+    : `<select id="evOwner" disabled><option value="${currentUser}">${me().name} (you)</option></select>`;
+  openModal(`
+    <h3>Add calendar event</h3>
+    <div class="field"><label>Title</label><input id="evTitle" placeholder="e.g., Work shift, Practice, Appointment"></div>
+    <div class="f2">
+      <div class="field"><label>Who</label>${ownerSel}</div>
+      <div class="field"><label>Date</label><input type="date" id="evDate" value="${calView==='day'?calAnchor:dISO(0)}"></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Start</label><input type="time" id="evStart" value="16:00"></div>
+      <div class="field"><label>End</label><input type="time" id="evEnd" value="17:00"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:6px">
+      <button class="btn sec" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveEvent()">Add event</button>
+    </div>
+    <div class="muted" style="margin-top:10px">Two-way sync: this event will also be pushed to the owner's Google Calendar (simulated).</div>
+  `);
+}
+function saveEvent(){
+  const title=document.getElementById("evTitle").value.trim();
+  if(!title){ toast("Give the event a title"); return; }
+  const memberId=document.getElementById("evOwner").value;
+  S.events.push({id:uid(), title, memberId, date:document.getElementById("evDate").value,
+    start:document.getElementById("evStart").value, end:document.getElementById("evEnd").value, source:"app"});
+  save(); closeModal();
+  toast("Event added — pushed to "+M(memberId).name+"'s Google Calendar (simulated)");
+  renderAll();
+}
+
+/* ================= TASKS tab ================= */
+function taskCard(t){
+  const m=M(t.memberId);
+  const mine=t.memberId===currentUser;
+  const overdue=t.date<dISO(0) && t.status==="assigned";
+  const subs=t.subtasks.map(s=>`
+    <label class="sub ${s.done?"done":""}"><input type="checkbox" ${s.done?"checked":""} ${(mine||isParent())?"":"disabled"} onchange="toggleSub('${t.id}','${s.id}')"><span>${esc(s.title)}</span></label>`).join("");
+  let acts="";
+  if(mine && t.status==="assigned") acts+=`<button class="btn sm ok" onclick="markDone('${t.id}')">✓ Mark done</button>`;
+  if(mine && t.status==="done") acts+=`<span class="muted">Waiting for parent to verify…</span>`;
+  if(isParent()){
+    if(t.status==="done") acts+=`<button class="btn sm ok" onclick="verifyTask('${t.id}')">✓ Verify</button>`;
+    if(t.status==="assigned") acts+=`<button class="btn sm warn" onclick="nudge('${t.id}')">📣 Nudge ${m.name}</button>`;
+    if(t.status!=="verified") acts+=`<button class="btn sm sec" onclick="moveTask('${t.id}')">→ Move to tomorrow</button>`;
+    acts+=`<button class="btn sm dng" onclick="delTask('${t.id}')">Delete</button>`;
+  } else if(mine && t.createdBy===currentUser && !t.zoneId){
+    acts+=`<button class="btn sm sec" onclick="moveTask('${t.id}')">→ Move to tomorrow</button>
+           <button class="btn sm dng" onclick="delTask('${t.id}')">Delete</button>`;
+  }
+  return `<div class="task" style="border-left-color:${m.color}">
+    <div class="top">
+      <div style="flex:1">
+        <div class="title">${esc(t.title)} <span class="st ${t.status}">${t.status==="assigned"?"to do":t.status}</span></div>
+        <div class="meta">
+          <span class="assg"><span class="sw" style="background:${m.color}"></span>${m.name}</span>
+          <span class="tag">${catLabel(t.cat)}</span>
+          ${t.jobId?'<span class="tag g">💵 paid job</span>':""}
+          <span>${relDay(t.date)}${t.deadline?" · due "+t.deadline:""}</span>
+          ${overdue?'<span class="overdue">overdue</span>':""}
+          ${t.zoneId?'<span class="muted">🧹 zone rotation</span>': t.createdBy!==t.memberId?`<span class="muted">assigned by ${M(t.createdBy).name}</span>`:'<span class="muted">self-added</span>'}
+        </div>
+      </div>
+    </div>
+    ${subs?`<div style="margin-top:8px">${subs}</div>`:""}
+    ${acts?`<div class="acts">${acts}</div>`:""}
+  </div>`;
+}
+const TOPCATS=[
+  ["School",  t=>t.cat && t.cat.indexOf("school-")===0, "📚"],
+  ["Work",    t=>t.cat==="work", "💼"],
+  ["Home",    t=>t.cat==="home"||t.cat==="zone", "🏠"],
+  ["Personal",t=>t.cat==="personal"||t.cat==="goal", "⭐"]
+];
+let taskFilter=null; // parent's per-person filter
+function renderTasks(){
+  let ts=visibleTasks().slice().sort((a,b)=> a.date<b.date?-1: a.date>b.date?1:0);
+  if(isParent() && taskFilter) ts=ts.filter(t=>t.memberId===taskFilter);
+  const active=ts.filter(t=>t.status!=="verified");
+  const done=ts.filter(t=>t.status==="verified");
+  const overdueCount=active.filter(t=>t.date<dISO(0)&&t.status==="assigned").length;
+
+  let html=`<div class="card"><h2>${isParent()?"All family tasks":"My tasks"} <span class="sub">${isParent()?"parents see and manage everything":"you only see tasks assigned to you"}</span></h2>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn sm" onclick="openTaskModal()">+ ${isParent()?"Assign task":"Add my own item"}</button>
+      ${isParent()&&overdueCount?`<button class="btn sm warn" onclick="rollAll()">↻ Roll ${overdueCount} incomplete to today</button>`:""}
+    </div>`;
+  if(isParent()){
+    html+=`<div class="row" style="margin-bottom:12px">
+      <button class="chip ${!taskFilter?"on":""}" onclick="taskFilter=null;renderAll()">Everyone</button>
+      ${S.members.map(m=>`<button class="chip ${taskFilter===m.id?"on":""}" onclick="taskFilter='${m.id}';renderAll()"><span class="sw" style="background:${m.color}"></span>${m.name}</button>`).join("")}
+    </div>`;
+  }
+  let any=false;
+  for(const [label,match,icon] of TOPCATS){
+    const list=active.filter(match);
+    if(!list.length) continue; // hide empty categories
+    any=true;
+    html+=`<h2 style="margin-top:14px">${icon} ${label} <span class="sub">${list.length}</span></h2>`;
+    html+=list.map(taskCard).join("");
+  }
+  if(!any) html+= isParent()? '<div class="empty">No open tasks.</div>' : '<div class="empty">No tasks — enjoy it while it lasts 😄</div>';
+  html+="</div>";
+  if(done.length && isParent()){
+    html+=`<div class="card"><h2>✅ Verified <span class="sub">delete to clear them out</span></h2>${done.map(taskCard).join("")}</div>`;
+  }
+  return html;
+}
+function openTaskModal(){
+  const ownerSel = isParent()
+    ? `<select id="tkOwner">${S.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join("")}</select>`
+    : `<select id="tkOwner" disabled><option value="${currentUser}">${me().name} (you)</option></select>`;
+  const cats=catOptions();
+  openModal(`
+    <h3>${isParent()?"Assign a task":"Add my own item"}</h3>
+    <div class="field"><label>Title</label><input id="tkTitle" placeholder="e.g., Math, Clean your room, Work schedule"></div>
+    <div class="f2">
+      <div class="field"><label>${isParent()?"Assign to":"Owner"}</label>${ownerSel}</div>
+      <div class="field"><label>Category</label><select id="tkCat">${cats}</select></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Date</label><input type="date" id="tkDate" value="${dISO(0)}"></div>
+      <div class="field"><label>Deadline (optional)</label><input type="time" id="tkDl"></div>
+    </div>
+    <div class="field"><label>Remind before deadline</label>
+      <select id="tkRemind"><option value="0">No reminder</option><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="120">2 hours</option></select></div>
+    <div class="field"><label>Subtasks (one per line, optional)</label><textarea id="tkSubs" rows="3" placeholder="Do 5.1&#10;Do 5.2"></textarea></div>
+    <div class="row" style="justify-content:flex-end;margin-top:6px">
+      <button class="btn sec" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveTask()">${isParent()?"Assign":"Add"}</button>
+    </div>`);
+}
+function saveTask(){
+  const title=document.getElementById("tkTitle").value.trim();
+  if(!title){ toast("Give the task a title"); return; }
+  const memberId=document.getElementById("tkOwner").value;
+  const subs=document.getElementById("tkSubs").value.split("\n").map(s=>s.trim()).filter(Boolean).map(s=>({id:uid(),title:s,done:false}));
+  S.tasks.push({id:uid(), title, memberId, cat:document.getElementById("tkCat").value,
+    date:document.getElementById("tkDate").value, deadline:document.getElementById("tkDl").value,
+    remind:+document.getElementById("tkRemind").value, status:"assigned", createdBy:currentUser, subtasks:subs});
+  save(); closeModal();
+  if(memberId!==currentUser) notify(memberId,"update", me().name+' assigned you a task: "'+title+'"');
+  toast(memberId===currentUser?"Added to your list":"Task assigned to "+M(memberId).name);
+  renderAll();
+}
+function toggleSub(tid,sid){
+  const t=S.tasks.find(x=>x.id===tid); const s=t.subtasks.find(x=>x.id===sid);
+  s.done=!s.done; save(); renderAll();
+}
+function markDone(tid){
+  const t=S.tasks.find(x=>x.id===tid);
+  t.status="done";
+  const j=t.jobId? S.jobs.find(x=>x.id===t.jobId):null;
+  if(j && j.status==="taken") j.status="done";
+  save();
+  notifyParents("update", M(t.memberId).name+' marked "'+t.title+'" as done — ready to verify');
+  toast("Nice! Sent to your parents to verify.");
+  renderAll();
+}
+function verifyTask(tid){
+  const t=S.tasks.find(x=>x.id===tid);
+  t.status="verified";
+  if(t.zoneId){ S.zoneDone=S.zoneDone||{}; S.zoneDone[t.zoneId+":"+t.zoneCycle]=true; }
+  const j=t.jobId? S.jobs.find(x=>x.id===t.jobId):null;
+  if(j && j.status!=="paid"){ j.status="paid"; notify(j.takenBy,"job",'"'+j.title+'" verified — you earned $'+j.amount+" 🎉"); }
+  save();
+  notify(t.memberId,"update",'"'+t.title+'" was verified by '+me().name+" ✓");
+  toast(j?"Verified — job marked paid on the board":"Verified — you can delete it when ready");
+  renderAll();
+}
+function delTask(tid){
+  const t=S.tasks.find(x=>x.id===tid);
+  if(t && t.zoneId){ S.zoneDone=S.zoneDone||{}; S.zoneDone[t.zoneId+":"+t.zoneCycle]=true; } // don't regenerate this cycle
+  S.tasks=S.tasks.filter(x=>x.id!==tid); save(); toast("Task deleted"); renderAll();
+}
+function moveTask(tid){
+  const t=S.tasks.find(x=>x.id===tid);
+  t.date=iso(addDays(new Date(t.date+"T00:00:00"),1)); save();
+  toast('"'+t.title+'" moved to '+relDay(t.date)); renderAll();
+}
+function rollAll(){
+  let n=0;
+  S.tasks.forEach(t=>{ if(t.date<dISO(0)&&t.status==="assigned"){ t.date=dISO(0); n++; } });
+  save(); toast(n+" incomplete task(s) rolled to today"); renderAll();
+}
+function nudge(tid){
+  const t=S.tasks.find(x=>x.id===tid);
+  notify(t.memberId,"nudge",'Reminder from '+me().name+': please do "'+t.title+'"'+(t.deadline?" (due "+t.deadline+")":""));
+  toast("Nudge sent to "+M(t.memberId).name);
+}
+
+/* ================= ZONES tab ================= */
+function renderZones(){
+  if(!isParent()) return '<div class="card"><div class="empty">Zone management is a parent function. Your zone shows up on your task list.</div></div>';
+  const r=S.zoneRotation;
+  const rotLbl = r.intervalDays==="manual" ? "manual rotation" : `rotate every ${r.intervalDays} day${r.intervalDays>1?"s":""}`;
+  let html=`<div class="card"><h2>🧹 Chore zones <span class="sub">parent-managed · ${rotLbl} · next rotation: ${nextRotationDate()}</span></h2>
+  <div class="muted" style="margin-bottom:10px">Each zone appears automatically on the assigned person's task list, with its areas as subtasks.</div>`;
+  if(!S.zones.length) html+='<div class="empty">No zones defined yet.</div>';
+  html+=S.zones.map((z,i)=>{
+    const who=M(zoneAssignee(i));
+    const zt=S.tasks.find(x=>x.zoneId===z.id && x.zoneCycle===cycleNum() && x.status!=="verified");
+    const st=zt? (zt.status==="done"?'<span class="st done">done — verify on Tasks</span>':'<span class="st assigned">to do</span>') : '<span class="st verified">verified</span>';
+    return `<div class="zone" style="align-items:flex-start">
+      <div style="flex:1"><div class="zn">${esc(z.name)} ${st}</div>
+        <div class="muted" style="margin-top:3px">${(z.subzones&&z.subzones.length)? "Areas: "+z.subzones.map(esc).join(" · ") : "No sub-areas defined"}</div></div>
+      <div class="assg"><span class="sw" style="background:${who.color}"></span>
+        <select style="width:auto;padding:4px 8px" onchange="setZoneAssignee('${z.id}',this.value)" title="Who has this zone">
+          <option value="" ${!z.assignedTo?"selected":""}>↻ Rotation${!z.assignedTo?" ("+who.name+")":""}</option>
+          ${S.zoneRotation.members.map(mid=>`<option value="${mid}" ${z.assignedTo===mid?"selected":""}>📌 ${M(mid).name}</option>`).join("")}
+        </select></div>
+      <button class="btn sm sec" onclick="openZoneModal('${z.id}')">✎ Edit</button>
+      <button class="btn sm dng" onclick="delZone('${z.id}')">✕</button></div>`;
+  }).join("");
+  html+=`<div class="row" style="margin-top:12px">
+    <button class="btn sm" onclick="openZoneModal()">+ Add zone</button>
+    <button class="btn sm" onclick="rotateNow()">↻ Rotate now</button>
+    <label class="muted">Interval:
+      <select style="width:auto;display:inline-block;padding:4px 8px" onchange="setInterval2(this.value)">
+        ${[["manual","Manual (rotate by hand)"],["3","3 days"],["7","1 week (default)"],["14","14 days"]].map(([v,l])=>`<option value="${v}" ${String(r.intervalDays)===v?"selected":""}>${l}</option>`).join("")}
+      </select></label>
+  </div>
+  <div class="muted" style="margin-top:8px">📌 pins a zone to one person (skips rotation) · ↻ Rotation rotates it among ${S.zoneRotation.members.map(m=>M(m).name).join(", ")}.</div>
+  <div class="muted" style="margin-top:8px">In the real app rotation happens automatically on schedule and everyone gets notified.</div></div>`;
+  return html;
+}
+function rotateNow(){
+  S.zoneRotation.offset++; save();
+  S.zoneRotation.members.forEach(mid=>{
+    const zones=S.zones.map((z,i)=>({z,who:zoneAssignee(i)})).filter(x=>x.who===mid);
+    if(zones.length) notify(mid,"update","Zone rotation: this week you have "+zones.map(x=>x.z.name).join(", "));
+  });
+  toast("Zones rotated"); renderAll();
+}
+function setInterval2(v){
+  const r=S.zoneRotation;
+  const cur=cycleNum(); // preserve current assignments across the change
+  if(v==="manual"){ r.intervalDays="manual"; r.offset=cur; toast("Rotation set to manual — use “Rotate now”"); }
+  else{
+    const n=+v;
+    const days=Math.floor((today()-new Date(r.start+"T00:00:00"))/86400000);
+    r.intervalDays=n; r.offset=cur-Math.floor(days/n);
+    toast("Rotation interval updated");
+  }
+  save(); renderAll();
+}
+function setZoneAssignee(zid,v){
+  const z=S.zones.find(x=>x.id===zid);
+  z.assignedTo=v||null;
+  // refresh this cycle's task for the new assignee
+  const c=cycleNum();
+  S.tasks=S.tasks.filter(t=>!(t.zoneId===zid && t.zoneCycle===c && t.status!=="verified"));
+  if(S.zoneDone) delete S.zoneDone[zid+":"+c];
+  save(); renderAll();
+  const who=zoneAssignee(S.zones.indexOf(z));
+  notify(who,"update","You've been assigned the zone: "+z.name);
+  toast(v? z.name+" pinned to "+M(v).name : z.name+" back in the rotation ("+M(who).name+" this cycle)");
+}
+function openZoneModal(zid){
+  const z=zid? S.zones.find(x=>x.id===zid) : null;
+  openModal(`
+    <h3>${z?"Edit zone":"Add a zone"}</h3>
+    <div class="field"><label>Zone name</label><input id="znName" value="${z?esc(z.name):""}" placeholder="e.g., Kitchen, Garage, Backyard"></div>
+    <div class="field"><label>Sub-areas (one per line — become subtasks on the assignee's list)</label>
+      <textarea id="znSubs" rows="4" placeholder="Dishes &amp; counters&#10;Sweep floor&#10;Take out trash">${z?(z.subzones||[]).map(esc).join("\n"):""}</textarea></div>
+    <div class="row" style="justify-content:flex-end;margin-top:6px">
+      <button class="btn sec" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveZone(${z?`'${z.id}'`:"null"})">${z?"Save":"Add zone"}</button>
+    </div>
+    ${z?"":'<div class="muted" style="margin-top:10px">New zones join the rotation immediately and appear on the assignee’s task list.</div>'}`);
+  setTimeout(()=>{ const i=document.getElementById("znName"); if(i&&i.focus) i.focus(); },50);
+}
+function saveZone(zid){
+  const name=document.getElementById("znName").value.trim();
+  if(!name){ toast("Give the zone a name"); return; }
+  const subzones=document.getElementById("znSubs").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(zid){
+    const z=S.zones.find(x=>x.id===zid); z.name=name; z.subzones=subzones;
+    // refresh this cycle's task to match (drops progress on that zone's checklist)
+    S.tasks=S.tasks.filter(t=>!(t.zoneId===zid && t.zoneCycle===cycleNum() && t.status!=="verified"));
+    toast("Zone updated — assignee's task refreshed");
+  } else {
+    S.zones.push({id:uid(), name, subzones});
+    toast('"'+name+'" added to the rotation');
+  }
+  save(); closeModal(); renderAll();
+}
+function delZone(zid){
+  const z=S.zones.find(x=>x.id===zid);
+  S.zones=S.zones.filter(x=>x.id!==zid);
+  S.tasks=S.tasks.filter(t=>!(t.zoneId===zid && t.status!=="verified"));
+  save(); toast('"'+z.name+'" removed from the rotation'); renderAll();
+}
+
+/* ================= JOBS tab ================= */
+function renderJobs(){
+  let html=`<div class="card"><h2>💵 Work-for-hire board <span class="sub">paid jobs anyone can take to earn money</span></h2>`;
+  if(isParent()) html+=`<div class="row" style="margin-bottom:12px"><button class="btn sm" onclick="openJobModal()">+ Post a job</button></div>`;
+  const stLbl={open:"Open", taken:"In progress", done:"Done — awaiting payment", paid:"Paid"};
+  html+= S.jobs.length? S.jobs.map(j=>{
+    const taker=j.takenBy?M(j.takenBy):null;
+    let acts="";
+    if(j.status==="open" && !isParent()) acts=`<button class="btn sm" onclick="takeJob('${j.id}')">I'll take it</button>`;
+    if(j.status==="taken" && j.takenBy===currentUser) acts=`<button class="btn sm ok" onclick="jobDone('${j.id}')">✓ Mark done</button>`;
+    if(j.status==="done" && isParent()) acts=`<button class="btn sm ok" onclick="payJob('${j.id}')">💰 Verify & pay</button>`;
+    if(isParent()) acts+=` <button class="btn sm dng" onclick="delJob('${j.id}')">Remove</button>`;
+    return `<div class="job">
+      <div class="jt">${esc(j.title)}<div class="muted" style="font-weight:400">${stLbl[j.status]}${taker?" · "+taker.name:""}</div></div>
+      <div class="amt">$${j.amount}</div>
+      <div class="row">${acts}</div>
+    </div>`;
+  }).join("") : '<div class="empty">No jobs posted.</div>';
+  html+="</div>";
+  return html;
+}
+function openJobModal(){
+  openModal(`
+    <h3>Post a paid job</h3>
+    <div class="field"><label>Job</label><input id="jbTitle" placeholder="e.g., Mow the lawn"></div>
+    <div class="field"><label>Pays ($)</label><input type="number" id="jbAmt" value="10" min="1"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:6px">
+      <button class="btn sec" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveJob()">Post</button>
+    </div>`);
+}
+function saveJob(){
+  const title=document.getElementById("jbTitle").value.trim();
+  if(!title){ toast("Give the job a name"); return; }
+  const amount=+document.getElementById("jbAmt").value||5;
+  S.jobs.push({id:uid(), title, amount, status:"open", takenBy:null});
+  save(); closeModal();
+  S.members.filter(m=>m.role==="kid").forEach(k=>notify(k.id,"job",'New paid job posted: "'+title+'" — $'+amount));
+  toast("Job posted — kids notified"); renderAll();
+}
+function takeJob(jid){
+  const j=S.jobs.find(x=>x.id===jid); j.status="taken"; j.takenBy=currentUser;
+  const t={id:uid(), title:'Job: '+j.title+' ($'+j.amount+')', memberId:currentUser, cat:"work",
+    date:dISO(0), deadline:"", remind:0, status:"assigned", createdBy:currentUser, subtasks:[], jobId:j.id};
+  S.tasks.push(t); j.taskId=t.id; save();
+  notifyParents("job", me().name+' claimed the job "'+j.title+'" ($'+j.amount+")");
+  toast("Claimed! Added to your task list — $"+j.amount+" when done & verified."); renderAll();
+}
+function jobDone(jid){
+  const j=S.jobs.find(x=>x.id===jid); j.status="done";
+  const t=S.tasks.find(x=>x.id===j.taskId); if(t && t.status==="assigned") t.status="done";
+  save();
+  notifyParents("job", me().name+' finished "'+j.title+'" — verify & pay $'+j.amount);
+  toast("Marked done — your parents were alerted"); renderAll();
+}
+function payJob(jid){
+  const j=S.jobs.find(x=>x.id===jid); j.status="paid";
+  const t=S.tasks.find(x=>x.id===j.taskId); if(t) t.status="verified";
+  save();
+  notify(j.takenBy,"job",'"'+j.title+'" verified — you earned $'+j.amount+" 🎉");
+  toast("Paid "+M(j.takenBy).name+" $"+j.amount); renderAll();
+}
+function delJob(jid){
+  const j=S.jobs.find(x=>x.id===jid);
+  if(j && j.taskId) S.tasks=S.tasks.filter(x=>x.id!==j.taskId || x.status==="verified");
+  S.jobs=S.jobs.filter(x=>x.id!==jid); save(); renderAll();
+}
+
+/* ================= SETTINGS tab ================= */
+function renderSettings(){
+  if(!isParent()) return '<div class="card"><div class="empty">Settings are managed by parents.</div></div>';
+  let html=`<div class="card"><h2>🔄 Google Calendar sync <span class="sub">two-way — events created in either system appear in both (simulated)</span></h2>
+    <table class="share"><tr><th>Person</th><th>Google sync</th><th>Calendar shared with</th></tr>
+    ${S.members.map(m=>`<tr>
+      <td><span class="assg"><span class="sw" style="background:${m.color}"></span>${m.name}</span></td>
+      <td>${S.googleSync[m.id]?'<span class="tag g">Connected</span>':'<span class="tag">Off</span>'}
+        ${isParent()||m.id===currentUser?`<button class="btn sm sec" style="margin-left:6px" onclick="toggleSync('${m.id}')">${S.googleSync[m.id]?"Disconnect":"Connect"}</button>`:""}</td>
+      <td>${isParent()||m.id===currentUser?`<select style="width:auto;padding:4px 8px" onchange="setShare('${m.id}',this.value)">
+          <option value="family" ${S.sharing[m.id]==="family"?"selected":""}>Whole family</option>
+          <option value="parents" ${S.sharing[m.id]==="parents"?"selected":""}>Parents only</option>
+          <option value="private" ${S.sharing[m.id]==="private"?"selected":""}>Just me</option>
+        </select>`: (S.sharing[m.id]==="family"?"Whole family":S.sharing[m.id])}</td>
+    </tr>`).join("")}
+    </table>
+    <div class="row" style="margin-top:12px">
+      <button class="btn sm sec" onclick="simGoogle()">⇣ Simulate event arriving from Google</button>
+    </div></div>
+
+  ${isParent()?`<div class="card"><h2>📚 School subjects <span class="sub">used as School categories on tasks</span></h2>
+    ${S.subjects.length? S.subjects.map(s=>`<div class="zone"><div class="zn">${esc(s.name)}</div>
+      <button class="btn sm sec" onclick="openSubjectModal('${s.id}')">✎ Edit</button>
+      <button class="btn sm dng" onclick="delSubject('${s.id}')">✕</button></div>`).join("")
+      : '<div class="empty">No subjects defined.</div>'}
+    <div class="row" style="margin-top:12px"><button class="btn sm" onclick="openSubjectModal()">+ Add subject</button></div>
+    <div class="muted" style="margin-top:8px">Tasks using a deleted subject show as "School · Other".</div>
+  </div>`:""}
+
+  <div class="card"><h2>🔔 Notifications</h2>
+    <div class="muted" style="line-height:1.7">
+      ① <b>Daily brief</b> — every morning at 7:00 AM (demo: use "Send daily brief" on the Today tab as a parent)<br>
+      ② <b>Deadline alerts</b> — a set time before a task's deadline (per-task setting)<br>
+      ③ <b>Parent nudge</b> — on-demand, from any task card (parents only)
+    </div>
+    <div class="muted" style="margin-top:10px">Delivered as free web push (works on iPhone for installed web apps) — no App Store or paid developer account needed.</div>
+  </div>
+
+  <div class="card"><h2>🛠 Prototype controls</h2>
+    <div class="row">
+      <button class="btn sm sec" onclick="resetDemo()">Reset demo data</button>
+      <span class="muted">Data is saved in this browser only.</span>
+    </div>
+    <div class="muted" style="margin-top:10px">Simulated in this prototype: sign-in (use the avatars up top), Google two-way sync, push delivery, and the 7 AM scheduler. Everything else — calendar views, color coding &amp; filters, tasks with subtasks, categories, assign → done → verify → delete, kid/parent access control, move/roll, rotating zones, and the job board — is fully working.</div>
+  </div>`;
+  return html;
+}
+function openSubjectModal(sid){
+  const s=sid? S.subjects.find(x=>x.id===sid) : null;
+  openModal(`
+    <h3>${s?"Edit subject":"Add a school subject"}</h3>
+    <div class="field"><label>Subject name</label><input id="sbName" value="${s?esc(s.name):""}" placeholder="e.g., History, Welding, Spanish"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:6px">
+      <button class="btn sec" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveSubject(${s?`'${s.id}'`:"null"})">${s?"Save":"Add"}</button>
+    </div>`);
+  setTimeout(()=>{ const i=document.getElementById("sbName"); if(i&&i.focus) i.focus(); },50);
+}
+function saveSubject(sid){
+  const name=document.getElementById("sbName").value.trim();
+  if(!name){ toast("Give the subject a name"); return; }
+  if(sid){ S.subjects.find(x=>x.id===sid).name=name; toast("Subject updated"); }
+  else{ S.subjects.push({id:uid(), name}); toast('"'+name+'" added to School categories'); }
+  save(); closeModal(); renderAll();
+}
+function delSubject(sid){
+  const s=S.subjects.find(x=>x.id===sid);
+  S.subjects=S.subjects.filter(x=>x.id!==sid);
+  save(); toast('"'+s.name+'" removed'); renderAll();
+}
+function toggleSync(mid){ S.googleSync[mid]=!S.googleSync[mid]; save(); toast(M(mid).name+"'s Google Calendar "+(S.googleSync[mid]?"connected":"disconnected")+" (simulated)"); renderAll(); }
+function setShare(mid,v){ S.sharing[mid]=v; save(); toast(M(mid).name+"'s calendar now shared with: "+v); }
+function simGoogle(){
+  const pool=[["mom","Parent–teacher conference","15:30","16:00"],["dad","Client dinner","18:30","20:30"],["sara","Orthodontist","10:00","10:45"]];
+  const p=pool[Math.floor(Math.random()*pool.length)];
+  S.events.push({id:uid(), title:p[1], memberId:p[0], date:dISO(1), start:p[2], end:p[3], source:"google"});
+  save();
+  notify(currentUser,"sync",'Synced from Google: "'+p[1]+'" ('+M(p[0]).name+", tomorrow "+p[2]+")");
+  toast("Event synced in from Google Calendar"); renderAll();
+}
+
+/* ================= modal ================= */
+function openModal(html){ document.getElementById("modalBox").innerHTML=html; document.getElementById("modal").classList.add("open"); }
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeModal(); });
+
+/* ================= render ================= */
+function renderAll(){
+  ensureZoneTasks(); // keeps zone tasks in sync with rotation
+  renderHeader();
+  const main=document.getElementById("main");
+  main.innerHTML = tab==="today"?renderToday()
+    : tab==="calendar"?renderCalendar()
+    : tab==="tasks"?renderTasks()
+    : tab==="zones"?renderZones()
+    : tab==="jobs"?renderJobs()
+    : renderSettings();
+  renderNotifs();
+}
+
+load();
+generateDeadlineAlerts();
+if(!S.briefSent[dISO(0)] && S.notifs.filter(n=>n.kind==="brief").length===0){
+  /* auto morning brief on first open of the day (simulates the 7 AM job) */
+  S.members.forEach(m=> S.notifs.push({id:uid(), to:m.id, kind:"brief", text:"Good morning "+m.name+"! Today: "+briefLinesFor(m.id), time:"7:00 AM", read:false}));
+  S.briefSent[dISO(0)]=true; save();
+}
+renderAll();
+</script>
+</body>
+</html>
