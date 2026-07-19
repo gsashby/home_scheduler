@@ -66,7 +66,7 @@ export default function JobsPage() {
     <Card>
       <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
         💵 Work-for-hire board
-        <span className="text-xs font-normal text-gray-500">
+        <span className="text-xs font-normal text-gray-600">
           paid jobs anyone can take to earn money
         </span>
       </h2>
@@ -90,7 +90,7 @@ export default function JobsPage() {
             >
               <div className="min-w-[140px] flex-1 font-bold">
                 {j.title}
-                <div className="text-sm font-normal text-gray-500">
+                <div className="text-sm font-normal text-gray-600">
                   {STATUS_LABELS[j.status]}
                   {taker ? ` · ${taker.display_name}` : ""}
                 </div>

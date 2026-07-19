@@ -96,11 +96,11 @@ export default function ZonesPage() {
     <Card>
       <h2 className="mb-1 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
         🧹 Chore zones
-        <span className="text-xs font-normal text-gray-500">
+        <span className="text-xs font-normal text-gray-600">
           parent-managed · {rotLabel} · next rotation: {nextLabel}
         </span>
       </h2>
-      <p className="mb-2.5 text-sm text-gray-500">
+      <p className="mb-2.5 text-sm text-gray-600">
         Each zone appears automatically on the assigned person&rsquo;s task
         list, with its areas as subtasks.
       </p>
@@ -124,7 +124,7 @@ export default function ZonesPage() {
                   <StatusBadge status="verified" />
                 )}
               </div>
-              <div className="mt-0.5 text-sm text-gray-500">
+              <div className="mt-0.5 text-sm text-gray-600">
                 {z.subzones.length
                   ? `Areas: ${z.subzones.join(" · ")}`
                   : "No sub-areas defined"}
@@ -198,7 +198,7 @@ export default function ZonesPage() {
         >
           ↻ Rotate now
         </Button>
-        <label className="flex items-center gap-1.5 text-sm text-gray-500">
+        <label className="flex items-center gap-1.5 text-sm text-gray-600">
           Interval:
           <Select
             className="w-auto py-1"
@@ -227,7 +227,7 @@ export default function ZonesPage() {
           </Select>
         </label>
       </div>
-      <p className="mt-2 text-sm text-gray-500">
+      <p className="mt-2 text-sm text-gray-600">
         📌 pins a zone to one person (skips rotation) · ↻ Rotation rotates it
         among{" "}
         {(rotation?.member_order ?? [])
@@ -320,7 +320,7 @@ function ZoneModal({
         </Button>
       </div>
       {isNew && (
-        <p className="mt-2.5 text-xs text-gray-500">
+        <p className="mt-2.5 text-xs text-gray-600">
           New zones join the rotation immediately and appear on the
           assignee&rsquo;s task list.
         </p>

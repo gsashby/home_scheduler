@@ -114,7 +114,7 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
 
 export function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed border-gray-200 p-3.5 text-center text-sm text-gray-500">
+    <div className="rounded-lg border border-dashed border-gray-200 p-3.5 text-center text-sm text-gray-600">
       {children}
     </div>
   );

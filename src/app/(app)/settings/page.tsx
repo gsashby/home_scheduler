@@ -47,14 +47,14 @@ export default function SettingsPage() {
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           🔄 Google Calendar sync
-          <span className="text-xs font-normal text-gray-500">
+          <span className="text-xs font-normal text-gray-600">
             two-way — events created in either system appear in both
           </span>
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs text-gray-500">
+              <tr className="text-xs text-gray-600">
                 <th className="border-b border-gray-200 px-1.5 py-2 text-left">
                   Person
                 </th>
@@ -124,7 +124,7 @@ export default function SettingsPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-xs text-gray-500">
+        <p className="mt-3 text-xs text-gray-600">
           These control who a person&rsquo;s Google Calendar is shared with once
           it&rsquo;s connected. Connecting a real Google account (OAuth) is the
           next piece of this build — see the README build status.
@@ -134,7 +134,7 @@ export default function SettingsPage() {
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           📚 School subjects
-          <span className="text-xs font-normal text-gray-500">
+          <span className="text-xs font-normal text-gray-600">
             used as School categories on tasks
           </span>
         </h2>
@@ -173,14 +173,14 @@ export default function SettingsPage() {
             + Add subject
           </Button>
         </div>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm text-gray-600">
           Tasks using a deleted subject show as &ldquo;School · Other&rdquo;.
         </p>
       </Card>
 
       <Card>
         <h2 className="mb-2.5 text-[15px] font-semibold">🔔 Notifications</h2>
-        <div className="text-sm leading-7 text-gray-500">
+        <div className="text-sm leading-7 text-gray-600">
           ① <b>Daily brief</b> — every morning at 7:00 AM (or on-demand from
           Today as a parent)
           <br />② <b>Deadline alerts</b> — a set time before a task&rsquo;s
@@ -188,7 +188,7 @@ export default function SettingsPage() {
           <br />③ <b>Parent nudge</b> — on-demand, from any task card (parents
           only)
         </div>
-        <p className="mt-2.5 text-sm text-gray-500">
+        <p className="mt-2.5 text-sm text-gray-600">
           Delivered as free web push (works on iPhone for installed web apps) —
           no App Store or paid developer account needed.
         </p>

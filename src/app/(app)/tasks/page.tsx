@@ -96,7 +96,7 @@ export default function TasksPage() {
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           {isParent ? "All family tasks" : "My tasks"}
-          <span className="text-xs font-normal text-gray-500">
+          <span className="text-xs font-normal text-gray-600">
             {isParent
               ? "parents see and manage everything"
               : "you only see tasks assigned to you"}
@@ -159,7 +159,7 @@ export default function TasksPage() {
             <div key={g.label}>
               <h2 className="mt-3.5 text-[15px] font-semibold">
                 {g.icon} {g.label}{" "}
-                <span className="text-xs font-normal text-gray-500">
+                <span className="text-xs font-normal text-gray-600">
                   {g.list.length}
                 </span>
               </h2>
@@ -184,7 +184,7 @@ export default function TasksPage() {
         <Card>
           <h2 className="mb-2.5 text-[15px] font-semibold">
             ✅ Verified{" "}
-            <span className="text-xs font-normal text-gray-500">
+            <span className="text-xs font-normal text-gray-600">
               delete to clear them out
             </span>
           </h2>
@@ -263,7 +263,7 @@ function TaskCard({
           <div className="flex flex-wrap items-center gap-2 text-[14.5px] font-bold">
             {task.title} <StatusBadge status={task.status} />
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-600">
             <span className="flex items-center gap-1.5 font-semibold">
               <Swatch color={color} />
               {owner?.display_name}
@@ -276,11 +276,11 @@ function TaskCard({
             </span>
             {overdue && <span className="font-bold text-red-600">overdue</span>}
             {task.zone_id ? (
-              <span className="text-gray-500">🧹 zone rotation</span>
+              <span className="text-gray-600">🧹 zone rotation</span>
             ) : task.created_by !== task.member_id ? (
-              <span className="text-gray-500">assigned by parent</span>
+              <span className="text-gray-600">assigned by parent</span>
             ) : (
-              <span className="text-gray-500">self-added</span>
+              <span className="text-gray-600">self-added</span>
             )}
           </div>
         </div>
@@ -304,7 +304,7 @@ function TaskCard({
                   }
                   className="h-4 w-4 accent-green-600"
                 />
-                <span className={s.done ? "text-gray-500 line-through" : ""}>
+                <span className={s.done ? "text-gray-600 line-through" : ""}>
                   {s.title}
                 </span>
               </label>
@@ -329,7 +329,7 @@ function TaskCard({
           </Button>
         )}
         {mine && task.status === "done" && (
-          <span className="self-center text-sm text-gray-500">
+          <span className="self-center text-sm text-gray-600">
             Waiting for parent to verify…
           </span>
         )}

@@ -82,7 +82,7 @@ export default function TodayPage() {
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           ☀️ Daily brief — {fmtDay(todayISO())}
-          <span className="text-xs font-normal text-gray-500">
+          <span className="text-xs font-normal text-gray-600">
             what&rsquo;s going on today for {me.display_name}
           </span>
         </h2>
@@ -142,7 +142,7 @@ export default function TodayPage() {
           <h2 className="mb-2.5 text-[15px] font-semibold">📣 Parent tools</h2>
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={sendBriefAll}>Send daily brief to everyone</Button>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-600">
               {briefSentToday
                 ? "✓ Brief already sent today (fires automatically at 7:00 AM)"
                 : "Fires automatically each morning at 7:00 AM."}
@@ -166,7 +166,7 @@ function BriefLine({
   return (
     <div className="flex items-center gap-2.5 border-b border-gray-100 py-2 text-sm last:border-b-0">
       <Swatch color={color} size={11} />
-      <span className="w-16 shrink-0 text-xs text-gray-500">{time}</span>
+      <span className="w-16 shrink-0 text-xs text-gray-600">{time}</span>
       <span className="flex items-center gap-1.5">{children}</span>
     </div>
   );

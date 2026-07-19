@@ -27,7 +27,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6 text-center">
         <div>
           <h1 className="text-2xl font-semibold">Home Scheduler</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-600">
             The family calendar, tasks, and chore zones — all in one place.
           </p>
         </div>

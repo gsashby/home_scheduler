@@ -117,7 +117,7 @@ export default function CalendarPage() {
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1.5 text-sm font-semibold ${view === v ? "bg-gray-900 text-white" : "text-gray-500"}`}
+              className={`px-3 py-1.5 text-sm font-semibold ${view === v ? "bg-gray-900 text-white" : "text-gray-600"}`}
             >
               {v === "day" ? "Day" : v === "3day" ? "3-Day" : "Week"}
             </button>
@@ -201,7 +201,7 @@ export default function CalendarPage() {
                       : "border-gray-200"
                   }`}
                 >
-                  <h4 className="mb-1.5 flex justify-between text-xs text-gray-500">
+                  <h4 className="mb-1.5 flex justify-between text-xs text-gray-600">
                     <b className="text-gray-900">
                       {parseISODate(d).toLocaleDateString(undefined, {
                         weekday: "short",
@@ -237,13 +237,13 @@ export default function CalendarPage() {
                     </div>
                   ))}
                   {evs.length === 0 && tks.length === 0 && (
-                    <div className="text-[11px] text-gray-400">—</div>
+                    <div className="text-[11px] text-gray-500">—</div>
                   )}
                 </div>
               );
             })}
           </div>
-          <div className="mt-1.5 text-xs text-gray-500">
+          <div className="mt-1.5 text-xs text-gray-600">
             Tap any day to drill in · ☑ = task · G = synced with Google Calendar
           </div>
         </>
@@ -281,7 +281,7 @@ function DayView({
     <Card>
       <h2 className="mb-2 flex items-baseline gap-2 text-[15px] font-semibold">
         {relDay(date)}{" "}
-        <span className="text-xs font-normal text-gray-500">
+        <span className="text-xs font-normal text-gray-600">
           {fmtDay(date)}
         </span>
       </h2>
@@ -295,7 +295,7 @@ function DayView({
             key={e.id}
             className="flex gap-2.5 border-b border-gray-100 py-2"
           >
-            <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-500">
+            <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-600">
               {fmtTime(e.start_time)}–{fmtTime(e.end_time)}
             </div>
             <div
@@ -318,7 +318,7 @@ function DayView({
             key={t.id}
             className="flex gap-2.5 border-b border-gray-100 py-2 last:border-b-0"
           >
-            <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-500">
+            <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-600">
               {t.deadline ? fmtTime(t.deadline) : "all day"}
             </div>
             <div
@@ -451,7 +451,7 @@ function EventModal({
           Add event
         </Button>
       </div>
-      <p className="mt-2.5 text-xs text-gray-500">
+      <p className="mt-2.5 text-xs text-gray-600">
         Google Calendar two-way sync isn&rsquo;t connected yet for this
         event&rsquo;s owner — see Settings once it ships.
       </p>

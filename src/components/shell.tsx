@@ -47,7 +47,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 className={`rounded-t-lg border border-b-0 px-3.5 py-2 text-[13.5px] font-semibold whitespace-nowrap ${
                   active
                     ? "border-gray-200 bg-white text-gray-900"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    : "border-transparent text-gray-600 hover:text-gray-700"
                 }`}
               >
                 {tab.label}

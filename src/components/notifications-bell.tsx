@@ -123,7 +123,7 @@ export function NotificationsBell() {
                     {NOTIF_KIND_LABELS[n.kind]}
                   </div>
                   {n.text}
-                  <div className="mt-0.5 text-[11px] text-gray-500">
+                  <div className="mt-0.5 text-[11px] text-gray-600">
                     {new Date(n.created_at).toLocaleTimeString([], {
                       hour: "numeric",
                       minute: "2-digit",
