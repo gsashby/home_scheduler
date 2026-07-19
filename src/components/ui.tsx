@@ -19,7 +19,10 @@ export function Button({
   variant?: ButtonVariant;
   size?: "sm" | "md";
 }) {
-  const sizeClass = size === "sm" ? "px-2.5 py-1.5 text-xs rounded-lg" : "px-3.5 py-2 text-sm rounded-lg";
+  const sizeClass =
+    size === "sm"
+      ? "px-2.5 py-1.5 text-xs rounded-lg"
+      : "px-3.5 py-2 text-sm rounded-lg";
   return (
     <button
       {...props}
@@ -28,7 +31,10 @@ export function Button({
   );
 }
 
-export function Card({ className = "", ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function Card({
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       {...props}
@@ -42,7 +48,10 @@ export function Chip({
   color,
   className = "",
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; color?: string }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  active?: boolean;
+  color?: string;
+}) {
   return (
     <button
       {...props}
@@ -68,10 +77,24 @@ export function Swatch({ color, size = 10 }: { color: string; size?: number }) {
   );
 }
 
-export function Tag({ children, tone = "indigo" }: { children: React.ReactNode; tone?: "indigo" | "green" }) {
+export function Tag({
+  children,
+  tone = "indigo",
+}: {
+  children: React.ReactNode;
+  tone?: "indigo" | "green";
+}) {
   const cls =
-    tone === "green" ? "bg-green-50 text-green-800" : "bg-indigo-50 text-indigo-700";
-  return <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${cls}`}>{children}</span>;
+    tone === "green"
+      ? "bg-green-50 text-green-800"
+      : "bg-indigo-50 text-indigo-700";
+  return (
+    <span
+      className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${cls}`}
+    >
+      {children}
+    </span>
+  );
 }
 
 export function StatusBadge({ status }: { status: TaskStatus }) {
@@ -82,7 +105,11 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
         ? "bg-blue-50 text-blue-700"
         : "bg-emerald-50 text-emerald-700";
   const label = status === "assigned" ? "to do" : status;
-  return <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${cls}`}>{label}</span>;
+  return (
+    <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${cls}`}>
+      {label}
+    </span>
+  );
 }
 
 export function Empty({ children }: { children: React.ReactNode }) {

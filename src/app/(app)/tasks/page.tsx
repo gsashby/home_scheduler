@@ -6,7 +6,15 @@ import { useFamily } from "@/lib/family-context";
 import { useToast } from "@/lib/toast";
 import { relDay, todayISO } from "@/lib/date";
 import { categoryLabel, TOP_CATEGORIES } from "@/lib/categories";
-import { Button, Card, Chip, Empty, StatusBadge, Swatch, Tag } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  Empty,
+  StatusBadge,
+  Swatch,
+  Tag,
+} from "@/components/ui";
 import { Field, Modal, Select, TextArea, TextInput } from "@/components/modal";
 import type { Database, TaskCategory } from "@/lib/supabase/database.types";
 
@@ -40,8 +48,16 @@ export default function TasksPage() {
     const supabase = createClient();
     const channel = supabase
       .channel("tasks-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "subtasks" }, load)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        load,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subtasks" },
+        load,
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -51,7 +67,11 @@ export default function TasksPage() {
   // Generic dispatcher for the task-mutation RPCs below — each has a
   // different Args shape, so the precise per-function typing is bypassed
   // here deliberately; call sites pass the right args for the function name.
-  async function call(fn: keyof Database["public"]["Functions"], args: Record<string, unknown>, successMsg?: string) {
+  async function call(
+    fn: keyof Database["public"]["Functions"],
+    args: Record<string, unknown>,
+    successMsg?: string,
+  ) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await createClient().rpc(fn as any, args as any);
     if (error) {
@@ -67,7 +87,9 @@ export default function TasksPage() {
   const visible = filter ? tasks.filter((t) => t.member_id === filter) : tasks;
   const active = visible.filter((t) => t.status !== "verified");
   const done = visible.filter((t) => t.status === "verified");
-  const overdueCount = active.filter((t) => t.date < todayISO() && t.status === "assigned").length;
+  const overdueCount = active.filter(
+    (t) => t.date < todayISO() && t.status === "assigned",
+  ).length;
 
   return (
     <div>
@@ -75,7 +97,9 @@ export default function TasksPage() {
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           {isParent ? "All family tasks" : "My tasks"}
           <span className="text-xs font-normal text-gray-500">
-            {isParent ? "parents see and manage everything" : "you only see tasks assigned to you"}
+            {isParent
+              ? "parents see and manage everything"
+              : "you only see tasks assigned to you"}
           </span>
         </h2>
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -103,7 +127,12 @@ export default function TasksPage() {
               Everyone
             </Chip>
             {members.map((m) => (
-              <Chip key={m.id} active={filter === m.id} color={m.color} onClick={() => setFilter(m.id)}>
+              <Chip
+                key={m.id}
+                active={filter === m.id}
+                color={m.color}
+                onClick={() => setFilter(m.id)}
+              >
                 {m.display_name}
               </Chip>
             ))}
@@ -117,13 +146,22 @@ export default function TasksPage() {
           })).filter((g) => g.list.length > 0);
 
           if (groups.length === 0) {
-            return <Empty>{isParent ? "No open tasks." : "No tasks — enjoy it while it lasts 😄"}</Empty>;
+            return (
+              <Empty>
+                {isParent
+                  ? "No open tasks."
+                  : "No tasks — enjoy it while it lasts 😄"}
+              </Empty>
+            );
           }
 
           return groups.map((g) => (
             <div key={g.label}>
               <h2 className="mt-3.5 text-[15px] font-semibold">
-                {g.icon} {g.label} <span className="text-xs font-normal text-gray-500">{g.list.length}</span>
+                {g.icon} {g.label}{" "}
+                <span className="text-xs font-normal text-gray-500">
+                  {g.list.length}
+                </span>
               </h2>
               {g.list.map((t) => (
                 <TaskCard
@@ -145,7 +183,10 @@ export default function TasksPage() {
       {isParent && done.length > 0 && (
         <Card>
           <h2 className="mb-2.5 text-[15px] font-semibold">
-            ✅ Verified <span className="text-xs font-normal text-gray-500">delete to clear them out</span>
+            ✅ Verified{" "}
+            <span className="text-xs font-normal text-gray-500">
+              delete to clear them out
+            </span>
           </h2>
           {done.map((t) => (
             <TaskCard
@@ -170,7 +211,11 @@ export default function TasksPage() {
         members={members}
         subjects={subjects}
         onSaved={(assignedToSelf, memberName) => {
-          toast(assignedToSelf ? "Added to your list" : `Task assigned to ${memberName}`);
+          toast(
+            assignedToSelf
+              ? "Added to your list"
+              : `Task assigned to ${memberName}`,
+          );
           load();
         }}
       />
@@ -192,18 +237,27 @@ function TaskCard({
   meId: string;
   isParent: boolean;
   owner: { display_name: string; color: string } | undefined;
-  call: (fn: keyof Database["public"]["Functions"], args: Record<string, unknown>, msg?: string) => Promise<boolean>;
+  call: (
+    fn: keyof Database["public"]["Functions"],
+    args: Record<string, unknown>,
+    msg?: string,
+  ) => Promise<boolean>;
   reload: () => void;
 }) {
   const mine = task.member_id === meId;
   const overdue = task.date < todayISO() && task.status === "assigned";
-  const subjectName = task.subject_id ? subjects.find((s) => s.id === task.subject_id)?.name ?? null : null;
+  const subjectName = task.subject_id
+    ? (subjects.find((s) => s.id === task.subject_id)?.name ?? null)
+    : null;
   const color = owner?.color ?? "#9ca3af";
 
   const canSelfManage = mine && task.created_by === meId && !task.zone_id;
 
   return (
-    <div className="mb-2.5 rounded-lg border border-gray-200 bg-white p-3" style={{ borderLeftWidth: 5, borderLeftColor: color }}>
+    <div
+      className="mb-2.5 rounded-lg border border-gray-200 bg-white p-3"
+      style={{ borderLeftWidth: 5, borderLeftColor: color }}
+    >
       <div className="flex items-start gap-2">
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2 text-[14.5px] font-bold">
@@ -237,15 +291,22 @@ function TaskCard({
           {[...task.subtasks]
             .sort((a, b) => a.position - b.position)
             .map((s) => (
-              <label key={s.id} className="flex items-center gap-2 py-1 pl-1 text-[13.5px]">
+              <label
+                key={s.id}
+                className="flex items-center gap-2 py-1 pl-1 text-[13.5px]"
+              >
                 <input
                   type="checkbox"
                   checked={s.done}
                   disabled={!(mine || isParent)}
-                  onChange={() => call("toggle_subtask", { p_subtask_id: s.id })}
+                  onChange={() =>
+                    call("toggle_subtask", { p_subtask_id: s.id })
+                  }
                   className="h-4 w-4 accent-green-600"
                 />
-                <span className={s.done ? "text-gray-500 line-through" : ""}>{s.title}</span>
+                <span className={s.done ? "text-gray-500 line-through" : ""}>
+                  {s.title}
+                </span>
               </label>
             ))}
         </div>
@@ -253,15 +314,35 @@ function TaskCard({
 
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         {mine && task.status === "assigned" && (
-          <Button size="sm" variant="ok" onClick={() => call("mark_task_done", { p_task_id: task.id }, "Nice! Sent to your parents to verify.")}>
+          <Button
+            size="sm"
+            variant="ok"
+            onClick={() =>
+              call(
+                "mark_task_done",
+                { p_task_id: task.id },
+                "Nice! Sent to your parents to verify.",
+              )
+            }
+          >
             ✓ Mark done
           </Button>
         )}
-        {mine && task.status === "done" && <span className="self-center text-sm text-gray-500">Waiting for parent to verify…</span>}
+        {mine && task.status === "done" && (
+          <span className="self-center text-sm text-gray-500">
+            Waiting for parent to verify…
+          </span>
+        )}
         {isParent && (
           <>
             {task.status === "done" && (
-              <Button size="sm" variant="ok" onClick={() => call("verify_task", { p_task_id: task.id }, "Verified")}>
+              <Button
+                size="sm"
+                variant="ok"
+                onClick={() =>
+                  call("verify_task", { p_task_id: task.id }, "Verified")
+                }
+              >
                 ✓ Verify
               </Button>
             )}
@@ -269,27 +350,57 @@ function TaskCard({
               <Button
                 size="sm"
                 variant="warn"
-                onClick={() => call("nudge_task", { p_task_id: task.id }, `Nudge sent to ${owner?.display_name}`)}
+                onClick={() =>
+                  call(
+                    "nudge_task",
+                    { p_task_id: task.id },
+                    `Nudge sent to ${owner?.display_name}`,
+                  )
+                }
               >
                 📣 Nudge {owner?.display_name}
               </Button>
             )}
             {task.status !== "verified" && (
-              <Button size="sm" variant="secondary" onClick={() => call("move_task", { p_task_id: task.id }).then(reload)}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  call("move_task", { p_task_id: task.id }).then(reload)
+                }
+              >
                 → Move to tomorrow
               </Button>
             )}
-            <Button size="sm" variant="danger" onClick={() => call("delete_task", { p_task_id: task.id }, "Task deleted")}>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() =>
+                call("delete_task", { p_task_id: task.id }, "Task deleted")
+              }
+            >
               Delete
             </Button>
           </>
         )}
         {!isParent && canSelfManage && (
           <>
-            <Button size="sm" variant="secondary" onClick={() => call("move_task", { p_task_id: task.id }).then(reload)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                call("move_task", { p_task_id: task.id }).then(reload)
+              }
+            >
               → Move to tomorrow
             </Button>
-            <Button size="sm" variant="danger" onClick={() => call("delete_task", { p_task_id: task.id }, "Task deleted")}>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() =>
+                call("delete_task", { p_task_id: task.id }, "Task deleted")
+              }
+            >
               Delete
             </Button>
           </>
@@ -342,7 +453,8 @@ function TaskModal({
     setSaving(true);
     const memberId = isParent ? ownerId : me.id;
     const [kind, value] = catValue.split(":");
-    const category: TaskCategory = kind === "school" ? "school" : (value as TaskCategory);
+    const category: TaskCategory =
+      kind === "school" ? "school" : (value as TaskCategory);
     const subjectId = kind === "school" ? value : null;
     const subtasks = subtasksText
       .split("\n")
@@ -362,11 +474,18 @@ function TaskModal({
     setSaving(false);
     if (error) return;
     onClose();
-    onSaved(memberId === me.id, members.find((m) => m.id === memberId)?.display_name ?? "");
+    onSaved(
+      memberId === me.id,
+      members.find((m) => m.id === memberId)?.display_name ?? "",
+    );
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isParent ? "Assign a task" : "Add my own item"}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isParent ? "Assign a task" : "Add my own item"}
+    >
       <Field label="Title">
         <TextInput
           value={title}
@@ -377,7 +496,10 @@ function TaskModal({
       <div className="grid grid-cols-2 gap-2.5">
         <Field label={isParent ? "Assign to" : "Owner"}>
           {isParent ? (
-            <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+            <Select
+              value={ownerId}
+              onChange={(e) => setOwnerId(e.target.value)}
+            >
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.display_name}
@@ -391,7 +513,10 @@ function TaskModal({
           )}
         </Field>
         <Field label="Category">
-          <Select value={catValue} onChange={(e) => setCatValue(e.target.value)}>
+          <Select
+            value={catValue}
+            onChange={(e) => setCatValue(e.target.value)}
+          >
             {subjects.map((s) => (
               <option key={s.id} value={`school:${s.id}`}>
                 School · {s.name}
@@ -407,10 +532,18 @@ function TaskModal({
       </div>
       <div className="grid grid-cols-2 gap-2.5">
         <Field label="Date">
-          <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <TextInput
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </Field>
         <Field label="Deadline (optional)">
-          <TextInput type="time" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+          <TextInput
+            type="time"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+          />
         </Field>
       </div>
       <Field label="Remind before deadline">
@@ -422,7 +555,12 @@ function TaskModal({
         </Select>
       </Field>
       <Field label="Subtasks (one per line, optional)">
-        <TextArea rows={3} value={subtasksText} onChange={(e) => setSubtasksText(e.target.value)} placeholder={"Do 5.1\nDo 5.2"} />
+        <TextArea
+          rows={3}
+          value={subtasksText}
+          onChange={(e) => setSubtasksText(e.target.value)}
+          placeholder={"Do 5.1\nDo 5.2"}
+        />
       </Field>
       <div className="mt-1.5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>

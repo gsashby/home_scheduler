@@ -7,7 +7,9 @@ export default function LoginPage() {
   const [denied, setDenied] = useState(false);
 
   useEffect(() => {
-    setDenied(new URLSearchParams(window.location.search).get("denied") === "1");
+    setDenied(
+      new URLSearchParams(window.location.search).get("denied") === "1",
+    );
   }, []);
 
   const signInWithGoogle = async () => {
@@ -31,7 +33,8 @@ export default function LoginPage() {
         </div>
         {denied && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            That Google account isn&rsquo;t set up as a family member on this app.
+            That Google account isn&rsquo;t set up as a family member on this
+            app.
           </p>
         )}
         <button

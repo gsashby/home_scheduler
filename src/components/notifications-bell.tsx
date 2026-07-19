@@ -32,15 +32,28 @@ export function NotificationsBell() {
       .channel(`notifications-${me.id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `to_profile_id=eq.${me.id}` },
-        (payload) => setNotifs((prev) => [payload.new as Notification, ...prev]),
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `to_profile_id=eq.${me.id}`,
+        },
+        (payload) =>
+          setNotifs((prev) => [payload.new as Notification, ...prev]),
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "notifications", filter: `to_profile_id=eq.${me.id}` },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `to_profile_id=eq.${me.id}`,
+        },
         (payload) =>
           setNotifs((prev) =>
-            prev.map((n) => (n.id === payload.new.id ? (payload.new as Notification) : n)),
+            prev.map((n) =>
+              n.id === payload.new.id ? (payload.new as Notification) : n,
+            ),
           ),
       )
       .subscribe();
@@ -68,7 +81,7 @@ export function NotificationsBell() {
       >
         🔔
         {unread > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
             {unread}
           </span>
         )}
@@ -86,7 +99,11 @@ export function NotificationsBell() {
               <Button size="sm" variant="secondary" onClick={markAllRead}>
                 Mark all read
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => setOpen(false)}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setOpen(false)}
+              >
                 ✕
               </Button>
             </div>
@@ -97,15 +114,20 @@ export function NotificationsBell() {
                 <div
                   key={n.id}
                   className={`mb-2 rounded-lg border px-3 py-2.5 text-sm ${
-                    n.read ? "border-gray-200" : "border-l-4 border-l-indigo-600 border-y-gray-200 border-r-gray-200 bg-indigo-50"
+                    n.read
+                      ? "border-gray-200"
+                      : "border-l-4 border-y-gray-200 border-r-gray-200 border-l-indigo-600 bg-indigo-50"
                   }`}
                 >
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-indigo-600">
+                  <div className="text-[10px] font-bold tracking-wide text-indigo-600 uppercase">
                     {NOTIF_KIND_LABELS[n.kind]}
                   </div>
                   {n.text}
                   <div className="mt-0.5 text-[11px] text-gray-500">
-                    {new Date(n.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                    {new Date(n.created_at).toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
                   </div>
                 </div>
               ))

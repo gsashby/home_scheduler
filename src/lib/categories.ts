@@ -2,7 +2,10 @@ import type { TaskCategory } from "@/lib/supabase/database.types";
 
 // Matches the prototype's CATS map exactly (category select options, minus
 // "school" which is driven by the subjects table instead of a fixed label).
-export const CATEGORY_LABELS: Record<Exclude<TaskCategory, "school">, string> = {
+export const CATEGORY_LABELS: Record<
+  Exclude<TaskCategory, "school">,
+  string
+> = {
   work: "Work",
   home: "Home",
   personal: "Personal",
@@ -10,7 +13,10 @@ export const CATEGORY_LABELS: Record<Exclude<TaskCategory, "school">, string> = 
   zone: "Zone / Chore",
 };
 
-export function categoryLabel(category: TaskCategory, subjectName: string | null): string {
+export function categoryLabel(
+  category: TaskCategory,
+  subjectName: string | null,
+): string {
   if (category === "school") {
     return "School · " + (subjectName ?? "Other");
   }
@@ -27,5 +33,9 @@ export const TOP_CATEGORIES: {
   { label: "School", icon: "📚", match: (c) => c === "school" },
   { label: "Work", icon: "💼", match: (c) => c === "work" },
   { label: "Home", icon: "🏠", match: (c) => c === "home" || c === "zone" },
-  { label: "Personal", icon: "⭐", match: (c) => c === "personal" || c === "goal" },
+  {
+    label: "Personal",
+    icon: "⭐",
+    match: (c) => c === "personal" || c === "goal",
+  },
 ];

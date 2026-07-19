@@ -2,3 +2,6 @@
 node_modules
 supabase/.branches
 supabase/.temp
+
+# Reference spec, provided verbatim by the user — never reformat this.
+home-scheduler-prototype.html

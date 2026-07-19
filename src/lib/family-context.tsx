@@ -35,7 +35,9 @@ export function FamilyProvider({
         { event: "UPDATE", schema: "public", table: "profiles" },
         (payload) => {
           setMembers((prev) =>
-            prev.map((m) => (m.id === payload.new.id ? (payload.new as Profile) : m)),
+            prev.map((m) =>
+              m.id === payload.new.id ? (payload.new as Profile) : m,
+            ),
           );
         },
       )
@@ -58,7 +60,9 @@ export function FamilyProvider({
 
   if (!value) return null;
 
-  return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;
+  return (
+    <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>
+  );
 }
 
 export function useFamily(): FamilyContextValue {

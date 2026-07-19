@@ -12,10 +12,12 @@
 
 export type FamilyRole = "parent" | "kid";
 export type TaskStatus = "assigned" | "done" | "verified";
-export type TaskCategory = "school" | "work" | "home" | "personal" | "goal" | "zone";
+export type TaskCategory =
+  "school" | "work" | "home" | "personal" | "goal" | "zone";
 export type EventSource = "app" | "google";
 export type JobStatus = "open" | "taken" | "done" | "paid";
-export type NotifKind = "brief" | "deadline" | "nudge" | "update" | "sync" | "job";
+export type NotifKind =
+  "brief" | "deadline" | "nudge" | "update" | "sync" | "job";
 export type CalendarSharing = "family" | "parents" | "private";
 
 type ProfilesRow = {
@@ -28,7 +30,12 @@ type ProfilesRow = {
   created_at: string;
 };
 
-type SubjectsRow = { id: string; name: string; position: number; created_at: string };
+type SubjectsRow = {
+  id: string;
+  name: string;
+  position: number;
+  created_at: string;
+};
 
 type CalendarEventsRow = {
   id: string;
@@ -91,7 +98,13 @@ type TasksRow = {
   updated_at: string;
 };
 
-type SubtasksRow = { id: string; task_id: string; title: string; done: boolean; position: number };
+type SubtasksRow = {
+  id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  position: number;
+};
 
 type NotificationsRow = {
   id: string;
@@ -112,7 +125,11 @@ type PushSubscriptionsRow = {
   created_at: string;
 };
 
-type Rel<Cols extends string[], Ref extends string, RefCols extends string[]> = {
+type Rel<
+  Cols extends string[],
+  Ref extends string,
+  RefCols extends string[],
+> = {
   foreignKeyName: string;
   columns: Cols;
   isOneToOne: boolean;
@@ -138,7 +155,12 @@ export type Database = {
     Tables: {
       profiles: {
         Row: ProfilesRow;
-        Insert: Partial<ProfilesRow> & { id: string; display_name: string; role: FamilyRole; color: string };
+        Insert: Partial<ProfilesRow> & {
+          id: string;
+          display_name: string;
+          role: FamilyRole;
+          color: string;
+        };
         Update: Partial<ProfilesRow>;
         Relationships: [];
       };
@@ -186,7 +208,10 @@ export type Database = {
         Row: JobsRow;
         Insert: Partial<JobsRow> & { title: string; amount: number };
         Update: Partial<JobsRow>;
-        Relationships: [Rel<["taken_by"], "profiles", ["id"]>, Rel<["task_id"], "tasks", ["id"]>];
+        Relationships: [
+          Rel<["taken_by"], "profiles", ["id"]>,
+          Rel<["task_id"], "tasks", ["id"]>,
+        ];
       };
       tasks: {
         Row: TasksRow;
@@ -214,7 +239,11 @@ export type Database = {
       };
       notifications: {
         Row: NotificationsRow;
-        Insert: Partial<NotificationsRow> & { to_profile_id: string; kind: NotifKind; text: string };
+        Insert: Partial<NotificationsRow> & {
+          to_profile_id: string;
+          kind: NotifKind;
+          text: string;
+        };
         Update: Partial<NotificationsRow>;
         Relationships: [Rel<["to_profile_id"], "profiles", ["id"]>];
       };
@@ -246,17 +275,39 @@ export type Database = {
       is_member: { Args: Record<string, never>; Returns: boolean };
       is_parent: { Args: Record<string, never>; Returns: boolean };
       cycle_num: { Args: Record<string, never>; Returns: number };
-      next_rotation_date: { Args: Record<string, never>; Returns: string | null };
+      next_rotation_date: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
       zone_assignee: { Args: { p_zone_id: string }; Returns: string | null };
       zones_with_assignee: {
         Args: Record<string, never>;
-        Returns: { id: string; name: string; subzones: string[]; assigned_to: string | null; assignee_id: string | null }[];
+        Returns: {
+          id: string;
+          name: string;
+          subzones: string[];
+          assigned_to: string | null;
+          assignee_id: string | null;
+        }[];
       };
       ensure_zone_tasks: { Args: Record<string, never>; Returns: void };
       rotate_now: { Args: Record<string, never>; Returns: void };
-      set_zone_interval: { Args: { p_interval_days: number | null }; Returns: void };
-      set_zone_assignee: { Args: { p_zone_id: string; p_member_id: string | null }; Returns: void };
-      save_zone: { Args: { p_zone_id: string | null; p_name: string; p_subzones: string[] }; Returns: string };
+      set_zone_interval: {
+        Args: { p_interval_days: number | null };
+        Returns: void;
+      };
+      set_zone_assignee: {
+        Args: { p_zone_id: string; p_member_id: string | null };
+        Returns: void;
+      };
+      save_zone: {
+        Args: {
+          p_zone_id: string | null;
+          p_name: string;
+          p_subzones: string[];
+        };
+        Returns: string;
+      };
       delete_zone: { Args: { p_zone_id: string }; Returns: void };
       create_task: {
         Args: {
@@ -278,13 +329,20 @@ export type Database = {
       move_task: { Args: { p_task_id: string }; Returns: void };
       roll_all_tasks: { Args: Record<string, never>; Returns: number };
       nudge_task: { Args: { p_task_id: string }; Returns: void };
-      create_job: { Args: { p_title: string; p_amount: number }; Returns: string };
+      create_job: {
+        Args: { p_title: string; p_amount: number };
+        Returns: string;
+      };
       take_job: { Args: { p_job_id: string }; Returns: string };
       job_done: { Args: { p_job_id: string }; Returns: void };
       pay_job: { Args: { p_job_id: string }; Returns: void };
       delete_job: { Args: { p_job_id: string }; Returns: void };
       set_member_settings: {
-        Args: { p_member_id: string; p_google_sync: boolean | null; p_sharing: CalendarSharing | null };
+        Args: {
+          p_member_id: string;
+          p_google_sync: boolean | null;
+          p_sharing: CalendarSharing | null;
+        };
         Returns: void;
       };
       mark_all_read: { Args: Record<string, never>; Returns: void };

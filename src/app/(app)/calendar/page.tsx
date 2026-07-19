@@ -4,7 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/family-context";
 import { useToast } from "@/lib/toast";
-import { addDays, fmtDay, fmtTime, mondayOf, parseISODate, relDay, todayISO, toISODate } from "@/lib/date";
+import {
+  addDays,
+  fmtDay,
+  fmtTime,
+  mondayOf,
+  parseISODate,
+  relDay,
+  todayISO,
+  toISODate,
+} from "@/lib/date";
 import { Button, Card, Chip, Empty, Tag } from "@/components/ui";
 import { Field, Modal, Select, TextInput } from "@/components/modal";
 import type { Database } from "@/lib/supabase/database.types";
@@ -30,7 +39,9 @@ export default function CalendarPage() {
       return Array.from({ length: 7 }, (_, i) => toISODate(addDays(mon, i)));
     }
     if (view === "3day") {
-      return Array.from({ length: 3 }, (_, i) => toISODate(addDays(anchorDate, i)));
+      return Array.from({ length: 3 }, (_, i) =>
+        toISODate(addDays(anchorDate, i)),
+      );
     }
     return [anchor];
   }, [view, anchor]);
@@ -40,8 +51,18 @@ export default function CalendarPage() {
     const from = days[0];
     const to = days[days.length - 1];
     const [eventsRes, tasksRes] = await Promise.all([
-      supabase.from("calendar_events").select("*").gte("date", from).lte("date", to).order("start_time"),
-      supabase.from("tasks").select("*").gte("date", from).lte("date", to).neq("status", "verified"),
+      supabase
+        .from("calendar_events")
+        .select("*")
+        .gte("date", from)
+        .lte("date", to)
+        .order("start_time"),
+      supabase
+        .from("tasks")
+        .select("*")
+        .gte("date", from)
+        .lte("date", to)
+        .neq("status", "verified"),
     ]);
     setEvents(eventsRes.data ?? []);
     setTasks(tasksRes.data ?? []);
@@ -56,8 +77,16 @@ export default function CalendarPage() {
     const supabase = createClient();
     const channel = supabase
       .channel("calendar-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "calendar_events" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, load)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calendar_events" },
+        load,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        load,
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -72,7 +101,10 @@ export default function CalendarPage() {
       evs = evs.filter((e) => e.member_id === filter);
       tks = tks.filter((t) => t.member_id === filter);
     }
-    return { evs: evs.sort((a, b) => (a.start_time < b.start_time ? -1 : 1)), tks };
+    return {
+      evs: evs.sort((a, b) => (a.start_time < b.start_time ? -1 : 1)),
+      tks,
+    };
   }
 
   const step = view === "week" ? 7 : view === "3day" ? 3 : 1;
@@ -91,13 +123,29 @@ export default function CalendarPage() {
             </button>
           ))}
         </div>
-        <Button size="sm" variant="secondary" onClick={() => setAnchor(toISODate(addDays(parseISODate(anchor), -step)))}>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() =>
+            setAnchor(toISODate(addDays(parseISODate(anchor), -step)))
+          }
+        >
           ‹
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => setAnchor(todayISO())}>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setAnchor(todayISO())}
+        >
           Today
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => setAnchor(toISODate(addDays(parseISODate(anchor), step)))}>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() =>
+            setAnchor(toISODate(addDays(parseISODate(anchor), step)))
+          }
+        >
           ›
         </Button>
         <div className="flex-1" />
@@ -111,19 +159,30 @@ export default function CalendarPage() {
           Everyone
         </Chip>
         {members.map((m) => (
-          <Chip key={m.id} active={filter === m.id} color={m.color} onClick={() => setFilter(m.id)}>
+          <Chip
+            key={m.id}
+            active={filter === m.id}
+            color={m.color}
+            onClick={() => setFilter(m.id)}
+          >
             {m.display_name}
           </Chip>
         ))}
       </div>
 
       {view === "day" ? (
-        <DayView date={days[0]} itemsForDay={itemsForDay} memberById={memberById} />
+        <DayView
+          date={days[0]}
+          itemsForDay={itemsForDay}
+          memberById={memberById}
+        />
       ) : (
         <>
           <div
             className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0,1fr))` }}
+            style={{
+              gridTemplateColumns: `repeat(${days.length}, minmax(0,1fr))`,
+            }}
           >
             {days.map((d) => {
               const { evs, tks } = itemsForDay(d);
@@ -137,33 +196,49 @@ export default function CalendarPage() {
                   }}
                   title={`Open ${relDay(d)}`}
                   className={`min-h-[120px] cursor-pointer rounded-lg border bg-white p-2 ${
-                    isToday ? "border-indigo-600 ring-1 ring-indigo-600" : "border-gray-200"
+                    isToday
+                      ? "border-indigo-600 ring-1 ring-indigo-600"
+                      : "border-gray-200"
                   }`}
                 >
                   <h4 className="mb-1.5 flex justify-between text-xs text-gray-500">
-                    <b className="text-gray-900">{parseISODate(d).toLocaleDateString(undefined, { weekday: "short" })}</b>
+                    <b className="text-gray-900">
+                      {parseISODate(d).toLocaleDateString(undefined, {
+                        weekday: "short",
+                      })}
+                    </b>
                     <span>{parseISODate(d).getDate()}</span>
                   </h4>
                   {evs.map((e) => (
                     <div
                       key={e.id}
-                      className="mb-1 truncate rounded-md px-1.5 py-1 text-[12px] font-semibold leading-tight text-white"
-                      style={{ backgroundColor: memberById(e.member_id)?.color }}
+                      className="mb-1 truncate rounded-md px-1.5 py-1 text-[12px] leading-tight font-semibold text-white"
+                      style={{
+                        backgroundColor: memberById(e.member_id)?.color,
+                      }}
                     >
                       {fmtTime(e.start_time)} {e.title}
-                      {e.source === "google" && <span className="ml-1 rounded bg-white/35 px-1 text-[9px]">G</span>}
+                      {e.source === "google" && (
+                        <span className="ml-1 rounded bg-white/35 px-1 text-[9px]">
+                          G
+                        </span>
+                      )}
                     </div>
                   ))}
                   {tks.map((t) => (
                     <div
                       key={t.id}
-                      className="mb-1 truncate rounded-md px-1.5 py-1 text-[12px] font-semibold leading-tight text-white opacity-90"
-                      style={{ backgroundColor: memberById(t.member_id)?.color }}
+                      className="mb-1 truncate rounded-md px-1.5 py-1 text-[12px] leading-tight font-semibold text-white opacity-90"
+                      style={{
+                        backgroundColor: memberById(t.member_id)?.color,
+                      }}
                     >
                       ☑ {t.title}
                     </div>
                   ))}
-                  {evs.length === 0 && tks.length === 0 && <div className="text-[11px] text-gray-400">—</div>}
+                  {evs.length === 0 && tks.length === 0 && (
+                    <div className="text-[11px] text-gray-400">—</div>
+                  )}
                 </div>
               );
             })}
@@ -197,26 +272,41 @@ function DayView({
 }: {
   date: string;
   itemsForDay: (d: string) => { evs: Event[]; tks: Task[] };
-  memberById: (id: string) => { display_name: string; color: string } | undefined;
+  memberById: (
+    id: string,
+  ) => { display_name: string; color: string } | undefined;
 }) {
   const { evs, tks } = itemsForDay(date);
   return (
     <Card>
       <h2 className="mb-2 flex items-baseline gap-2 text-[15px] font-semibold">
-        {relDay(date)} <span className="text-xs font-normal text-gray-500">{fmtDay(date)}</span>
+        {relDay(date)}{" "}
+        <span className="text-xs font-normal text-gray-500">
+          {fmtDay(date)}
+        </span>
       </h2>
-      {evs.length === 0 && tks.length === 0 && <Empty>Nothing scheduled.</Empty>}
+      {evs.length === 0 && tks.length === 0 && (
+        <Empty>Nothing scheduled.</Empty>
+      )}
       {evs.map((e) => {
         const owner = memberById(e.member_id);
         return (
-          <div key={e.id} className="flex gap-2.5 border-b border-gray-100 py-2">
+          <div
+            key={e.id}
+            className="flex gap-2.5 border-b border-gray-100 py-2"
+          >
             <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-500">
               {fmtTime(e.start_time)}–{fmtTime(e.end_time)}
             </div>
-            <div className="flex-1 rounded-md px-2.5 py-1.5 text-sm font-semibold text-white" style={{ backgroundColor: owner?.color }}>
+            <div
+              className="flex-1 rounded-md px-2.5 py-1.5 text-sm font-semibold text-white"
+              style={{ backgroundColor: owner?.color }}
+            >
               {e.title}
               {e.source === "google" && <Tag tone="green">Google</Tag>}
-              <small className="block font-medium opacity-85">{owner?.display_name}</small>
+              <small className="block font-medium opacity-85">
+                {owner?.display_name}
+              </small>
             </div>
           </div>
         );
@@ -224,11 +314,21 @@ function DayView({
       {tks.map((t) => {
         const owner = memberById(t.member_id);
         return (
-          <div key={t.id} className="flex gap-2.5 border-b border-gray-100 py-2 last:border-b-0">
-            <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-500">{t.deadline ? fmtTime(t.deadline) : "all day"}</div>
-            <div className="flex-1 rounded-md px-2.5 py-1.5 text-sm font-semibold text-white opacity-90" style={{ backgroundColor: owner?.color }}>
+          <div
+            key={t.id}
+            className="flex gap-2.5 border-b border-gray-100 py-2 last:border-b-0"
+          >
+            <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-500">
+              {t.deadline ? fmtTime(t.deadline) : "all day"}
+            </div>
+            <div
+              className="flex-1 rounded-md px-2.5 py-1.5 text-sm font-semibold text-white opacity-90"
+              style={{ backgroundColor: owner?.color }}
+            >
               ☑ {t.title}
-              <small className="block font-medium opacity-85">{owner?.display_name}</small>
+              <small className="block font-medium opacity-85">
+                {owner?.display_name}
+              </small>
             </div>
           </div>
         );
@@ -303,7 +403,10 @@ function EventModal({
       <div className="grid grid-cols-2 gap-2.5">
         <Field label="Who">
           {isParent ? (
-            <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+            <Select
+              value={ownerId}
+              onChange={(e) => setOwnerId(e.target.value)}
+            >
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.display_name}
@@ -317,15 +420,27 @@ function EventModal({
           )}
         </Field>
         <Field label="Date">
-          <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <TextInput
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-2.5">
         <Field label="Start">
-          <TextInput type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+          <TextInput
+            type="time"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
         </Field>
         <Field label="End">
-          <TextInput type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <TextInput
+            type="time"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
         </Field>
       </div>
       <div className="mt-1.5 flex justify-end gap-2">
@@ -337,8 +452,8 @@ function EventModal({
         </Button>
       </div>
       <p className="mt-2.5 text-xs text-gray-500">
-        Google Calendar two-way sync isn&rsquo;t connected yet for this event&rsquo;s owner — see Settings once
-        it ships.
+        Google Calendar two-way sync isn&rsquo;t connected yet for this
+        event&rsquo;s owner — see Settings once it ships.
       </p>
     </Modal>
   );

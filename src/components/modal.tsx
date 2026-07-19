@@ -27,10 +27,18 @@ export function Modal({
   );
 }
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="mb-2.5">
-      <label className="mb-1 block text-xs font-semibold text-gray-500">{label}</label>
+      <label className="mb-1 block text-xs font-semibold text-gray-500">
+        {label}
+      </label>
       {children}
     </div>
   );
@@ -40,13 +48,21 @@ const inputClass =
   "w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100";
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`${inputClass} ${props.className ?? ""}`} />;
+  return (
+    <input {...props} className={`${inputClass} ${props.className ?? ""}`} />
+  );
 }
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={`${inputClass} ${props.className ?? ""}`} />;
+  return (
+    <select {...props} className={`${inputClass} ${props.className ?? ""}`} />
+  );
 }
 
-export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={`${inputClass} ${props.className ?? ""}`} />;
+export function TextArea(
+  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+) {
+  return (
+    <textarea {...props} className={`${inputClass} ${props.className ?? ""}`} />
+  );
 }

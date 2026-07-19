@@ -115,15 +115,15 @@ demo data.
 
 ## Scripts
 
-| Command                | Purpose                    |
-| ----------------------- | --------------------------- |
-| `npm run dev`           | Start the dev server        |
-| `npm run build`         | Production build            |
-| `npm run start`         | Run the production build    |
-| `npm run lint`          | ESLint                      |
-| `npm run typecheck`     | `tsc --noEmit`               |
-| `npm run format`        | Prettier, writes changes    |
-| `npm run format:check`  | Prettier, check only (CI)   |
+| Command                | Purpose                   |
+| ---------------------- | ------------------------- |
+| `npm run dev`          | Start the dev server      |
+| `npm run build`        | Production build          |
+| `npm run start`        | Run the production build  |
+| `npm run lint`         | ESLint                    |
+| `npm run typecheck`    | `tsc --noEmit`            |
+| `npm run format`       | Prettier, writes changes  |
+| `npm run format:check` | Prettier, check only (CI) |
 
 Once you have a Supabase project linked, regenerate typed database types
 with:
@@ -151,9 +151,25 @@ Following the phased build order from the handoff spec:
 
 - [x] **Phase 1** — Postgres schema, RLS, and RPC business logic (done,
       tested against a real local Postgres instance)
-- [ ] **Phase 2** — Next.js app shell: Today / Calendar / Tasks tabs
-- [ ] **Phase 3** — Zones tab, Job Board tab, Settings tab
+- [x] **Phase 2** — Next.js app shell: Today / Calendar / Tasks tabs
+- [x] **Phase 3** — Zones tab, Job Board tab, Settings tab (all six tabs from
+      the prototype now exist and build clean — `npm run lint` / `typecheck`
+      / `build` all pass with zero errors)
 - [ ] **Phase 4** — Real web push (VAPID) + Edge Functions + pg_cron
-- [ ] **Phase 5** — Google Calendar two-way sync
+- [ ] **Phase 5** — Google Calendar two-way sync (Settings has the sharing
+      preference UI wired to the database already; the actual OAuth
+      connect flow is this phase)
 - [ ] **Phase 6** — Offline support, CSV/ICS export, backups doc, Playwright
       tests
+
+**What "done" means so far**: the schema was validated by applying it to a
+real local Postgres instance and exercising every RPC function directly
+(zone rotation math, dismiss-on-verify, job↔task sync, cross-role
+permission denials — see the commit history for the test script). The
+Next.js app has no live Supabase project to run against in this
+environment, so it's verified via `npm run typecheck`, `npm run lint`, and
+`npm run build` (all clean) plus careful manual review against the
+prototype's behavior — it has **not** been exercised in a browser against a
+real backend yet. Do that before considering the UI itself done: `supabase
+start` (needs Docker) + `npm run dev`, or point `.env.local` at a real
+Supabase project with the schema applied.

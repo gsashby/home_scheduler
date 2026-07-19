@@ -10,7 +10,8 @@ import type { Database } from "@/lib/supabase/database.types";
 
 type Event = Database["public"]["Tables"]["calendar_events"]["Row"];
 type Task = Database["public"]["Tables"]["tasks"]["Row"];
-type ZoneWithAssignee = Database["public"]["Functions"]["zones_with_assignee"]["Returns"][number];
+type ZoneWithAssignee =
+  Database["public"]["Functions"]["zones_with_assignee"]["Returns"][number];
 
 export default function TodayPage() {
   const { me, isParent, memberById } = useFamily();
@@ -25,15 +26,26 @@ export default function TodayPage() {
     const supabase = createClient();
     const t = todayISO();
     const [eventsRes, tasksRes, zonesRes, briefRes] = await Promise.all([
-      supabase.from("calendar_events").select("*").eq("date", t).order("start_time"),
-      supabase.from("tasks").select("*").lte("date", t).neq("status", "verified"),
+      supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("date", t)
+        .order("start_time"),
+      supabase
+        .from("tasks")
+        .select("*")
+        .lte("date", t)
+        .neq("status", "verified"),
       supabase.rpc("zones_with_assignee"),
       supabase
         .from("notifications")
         .select("id")
         .eq("to_profile_id", me.id)
         .eq("kind", "brief")
-        .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+        .gte(
+          "created_at",
+          new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
+        )
         .limit(1),
     ]);
     setEvents(eventsRes.data ?? []);
@@ -74,9 +86,9 @@ export default function TodayPage() {
             what&rsquo;s going on today for {me.display_name}
           </span>
         </h2>
-        {myEvents.length === 0 && myTasks.length === 0 && myZones.length === 0 && (
-          <Empty>Nothing on your plate today 🎉</Empty>
-        )}
+        {myEvents.length === 0 &&
+          myTasks.length === 0 &&
+          myZones.length === 0 && <Empty>Nothing on your plate today 🎉</Empty>}
         {myEvents.map((e) => (
           <BriefLine key={e.id} color={me.color} time={fmtTime(e.start_time)}>
             <b>{e.title}</b> — {me.display_name}
@@ -90,7 +102,9 @@ export default function TodayPage() {
             time={t.deadline ? `by ${fmtTime(t.deadline)}` : "today"}
           >
             <b>{t.title}</b>
-            {t.date < todayISO() && <span className="ml-1 font-bold text-red-600">overdue</span>}
+            {t.date < todayISO() && (
+              <span className="ml-1 font-bold text-red-600">overdue</span>
+            )}
           </BriefLine>
         ))}
         {myZones.map((z) => (
@@ -101,14 +115,20 @@ export default function TodayPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2.5 text-[15px] font-semibold">👨‍👩‍👧‍👦 Where everyone is today</h2>
+        <h2 className="mb-2.5 text-[15px] font-semibold">
+          👨‍👩‍👧‍👦 Where everyone is today
+        </h2>
         {otherEvents.length === 0 ? (
           <Empty>No one else has events today.</Empty>
         ) : (
           otherEvents.map((e) => {
             const owner = memberById(e.member_id);
             return (
-              <BriefLine key={e.id} color={owner?.color ?? "#9ca3af"} time={fmtTime(e.start_time)}>
+              <BriefLine
+                key={e.id}
+                color={owner?.color ?? "#9ca3af"}
+                time={fmtTime(e.start_time)}
+              >
                 <b>{e.title}</b> — {owner?.display_name}
                 {e.source === "google" && <Tag tone="green">Google</Tag>}
               </BriefLine>

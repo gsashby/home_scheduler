@@ -36,12 +36,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="-mb-px flex gap-1 overflow-x-auto pt-2">
           {tabs.map((tab) => {
-            const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+            const active =
+              tab.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(tab.href);
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`whitespace-nowrap rounded-t-lg border border-b-0 px-3.5 py-2 text-[13.5px] font-semibold ${
+                className={`rounded-t-lg border border-b-0 px-3.5 py-2 text-[13.5px] font-semibold whitespace-nowrap ${
                   active
                     ? "border-gray-200 bg-white text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-700"

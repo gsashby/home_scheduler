@@ -4,7 +4,9 @@ import { FamilyProvider } from "@/lib/family-context";
 import { ToastProvider } from "@/lib/toast";
 import { Shell } from "@/components/shell";
 
-export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function AppLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,7 +16,10 @@ export default async function AppLayout({ children }: Readonly<{ children: React
     redirect("/login");
   }
 
-  const { data: members } = await supabase.from("profiles").select("*").order("created_at");
+  const { data: members } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("created_at");
 
   // No row in profiles means this Google account isn't one of the 5 family
   // members — is_member() denies everything server-side too, so there's
