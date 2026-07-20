@@ -6,25 +6,35 @@ import { useFamily } from "@/lib/family-context";
 import { useToast } from "@/lib/toast";
 import { Button, Card, Empty, Swatch, Tag } from "@/components/ui";
 import { Field, Modal, Select, TextInput } from "@/components/modal";
+import { InviteForm } from "@/components/invite-form";
 import type { CalendarSharing, Database } from "@/lib/supabase/database.types";
 
 type Subject = Database["public"]["Tables"]["subjects"]["Row"];
+type FamilyInvite = Database["public"]["Tables"]["family_invites"]["Row"];
 
 export default function SettingsPage() {
-  const { isParent, members } = useFamily();
+  const { isParent, isFamilyAdmin, members, family } = useFamily();
   const toast = useToast();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectModal, setSubjectModal] = useState<Subject | null | "new">(
     null,
   );
+  const [invites, setInvites] = useState<FamilyInvite[]>([]);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    const { data } = await createClient()
-      .from("subjects")
-      .select("*")
-      .order("position");
-    setSubjects(data ?? []);
+    const supabase = createClient();
+    const [{ data: subjectsData }, { data: invitesData }] = await Promise.all([
+      supabase.from("subjects").select("*").order("position"),
+      supabase
+        .from("family_invites")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }),
+    ]);
+    setSubjects(subjectsData ?? []);
+    setInvites(invitesData ?? []);
     setLoading(false);
   }
 
@@ -44,6 +54,71 @@ export default function SettingsPage() {
 
   return (
     <div>
+      <Card>
+        <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
+          🔒 {family.name}
+          <span className="text-xs font-normal text-gray-600">
+            private to your family
+          </span>
+        </h2>
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-gray-600">Invite code:</span>
+          <code className="rounded-md bg-gray-100 px-2 py-1 font-mono font-semibold">
+            {family.invite_code}
+          </code>
+          {isFamilyAdmin && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={async () => {
+                const { data, error } = await createClient().rpc(
+                  "regenerate_invite_code",
+                );
+                if (error) {
+                  toast(error.message);
+                  return;
+                }
+                toast(`New invite code: ${data}`);
+                window.location.reload();
+              }}
+            >
+              Regenerate
+            </Button>
+          )}
+        </div>
+        {members.map((m) => (
+          <div
+            key={m.id}
+            className="mb-1.5 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3"
+          >
+            <Swatch color={m.color} />
+            <div className="flex-1 font-bold">{m.display_name}</div>
+            <Tag>{m.role}</Tag>
+            {m.family_member_role === "admin" && <Tag tone="green">admin</Tag>}
+            {isFamilyAdmin && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={async () => {
+                  const nextRole = m.role === "parent" ? "kid" : "parent";
+                  const { error } = await createClient().rpc(
+                    "set_member_role",
+                    { p_member_id: m.id, p_role: nextRole },
+                  );
+                  if (error) {
+                    toast(error.message);
+                    return;
+                  }
+                  toast(`${m.display_name} is now a ${nextRole}`);
+                }}
+              >
+                Make {m.role === "parent" ? "kid" : "parent"}
+              </Button>
+            )}
+          </div>
+        ))}
+      </Card>
+
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           🔄 Google Calendar sync
@@ -133,6 +208,55 @@ export default function SettingsPage() {
 
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
+          👪 Invite a family member
+          <span className="text-xs font-normal text-gray-600">
+            sends them an email to join
+          </span>
+        </h2>
+        {invites.length === 0 ? (
+          <Empty>No pending invites.</Empty>
+        ) : (
+          invites.map((inv) => (
+            <div
+              key={inv.id}
+              className="mb-1.5 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3"
+            >
+              <Swatch color={inv.color} />
+              <div className="flex-1">
+                <div className="font-bold">{inv.display_name}</div>
+                <div className="text-xs text-gray-600">{inv.email}</div>
+              </div>
+              <Tag>{inv.role}</Tag>
+              <Tag>pending</Tag>
+              {isFamilyAdmin && (
+                <Button
+                  size="sm"
+                  variant="danger"
+                  onClick={async () => {
+                    await createClient().rpc("cancel_family_invite", {
+                      p_invite_id: inv.id,
+                    });
+                    toast(`Invite to ${inv.email} canceled`);
+                    load();
+                  }}
+                >
+                  ✕
+                </Button>
+              )}
+            </div>
+          ))
+        )}
+        {isFamilyAdmin && (
+          <div className="mt-3">
+            <Button size="sm" onClick={() => setInviteModalOpen(true)}>
+              + Invite a family member
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           📚 School subjects
           <span className="text-xs font-normal text-gray-600">
             used as School categories on tasks
@@ -201,6 +325,21 @@ export default function SettingsPage() {
           load();
         }}
       />
+
+      <Modal
+        open={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        title="Invite a family member"
+      >
+        <InviteForm
+          onCancel={() => setInviteModalOpen(false)}
+          onSent={(email) => {
+            setInviteModalOpen(false);
+            toast(`Invite sent to ${email}`);
+            load();
+          }}
+        />
+      </Modal>
     </div>
   );
 }

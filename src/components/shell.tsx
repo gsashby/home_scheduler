@@ -7,7 +7,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import { Swatch } from "@/components/ui";
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { me, isParent } = useFamily();
+  const { me, isParent, family } = useFamily();
   const pathname = usePathname();
 
   const tabs = [
@@ -26,6 +26,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight">
             <span className="inline-block h-2.5 w-2.5 rounded-[3px] bg-indigo-600" />
             Home Scheduler
+          </span>
+          <span
+            className="hidden items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 sm:flex"
+            title="Private to your family — no other family can see or access this data."
+          >
+            {family.name}
+            <span className="text-gray-400">·</span>
+            🔒 Private to your family
           </span>
           <div className="flex-1" />
           <span className="flex items-center gap-1.5 text-sm text-gray-600">

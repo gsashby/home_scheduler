@@ -1,40 +1,43 @@
--- ONE-TIME production bootstrap. Do not commit a filled-in copy of this
--- file (it would contain real emails/UUIDs) — it's a template to run by
--- hand in the Supabase SQL editor, once, after the real setup steps below.
+-- SUPERSEDED for new households by the self-serve signup flow — sign up,
+-- then use "Create a new family" (calls public.create_family(), see
+-- supabase/migrations/20260720000001_multi_tenant_families.sql). That path
+-- also auto-creates each person's profiles row via the on_auth_user_created
+-- trigger, so there's no more manual auth.users id lookup needed.
 --
--- 1. Deploy the migrations (supabase db push) against your real project.
--- 2. Have all 5 family members sign in once with Google through the app's
---    /login page. Each sign-in creates a row in auth.users but — on
---    purpose — no row in public.profiles yet (see is_member() in the
---    schema: no profile row means no access).
--- 3. Find each person's auth.users.id:
---      select id, email from auth.users order by created_at;
--- 4. Copy this file, fill in the real ids below, and run it once in the
---    Supabase SQL editor (as the postgres/service role, which bypasses RLS).
+-- Kept for reference / manual recovery of a specific existing family (e.g.
+-- restoring zone rotation order or starter zones by hand). Do not commit a
+-- filled-in copy of this file (it would contain real emails/UUIDs) — it's a
+-- template to run by hand in the Supabase SQL editor.
+--
+-- To use it for an already-existing family: find the family's id
+-- (select id, name from public.families;), fill it in below alongside the
+-- real profile ids (select id, email from auth.users order by created_at;),
+-- and run once as the postgres/service role (bypasses RLS).
 
-insert into public.profiles (id, display_name, role, color) values
-  ('<dad-auth-uid>',   'Dad',   'parent', '#111827'),
-  ('<mom-auth-uid>',   'Mom',   'parent', '#d4a900'),
-  ('<sara-auth-uid>',  'Sara',  'kid',    '#ec4899'),
-  ('<david-auth-uid>', 'David', 'kid',    '#3b82f6'),
-  ('<jj-auth-uid>',    'JJ',    'kid',    '#22c55e');
+-- Each of these already has a placeholder profiles row from the
+-- on_auth_user_created trigger (family_id null) — this overwrites it.
+update public.profiles set display_name = 'Dad', role = 'parent', color = '#111827', family_id = '<family-id>', family_member_role = 'admin' where id = '<dad-auth-uid>';
+update public.profiles set display_name = 'Mom', role = 'parent', color = '#d4a900', family_id = '<family-id>', family_member_role = 'member' where id = '<mom-auth-uid>';
+update public.profiles set display_name = 'Sara', role = 'kid', color = '#ec4899', family_id = '<family-id>', family_member_role = 'member' where id = '<sara-auth-uid>';
+update public.profiles set display_name = 'David', role = 'kid', color = '#3b82f6', family_id = '<family-id>', family_member_role = 'member' where id = '<david-auth-uid>';
+update public.profiles set display_name = 'JJ', role = 'kid', color = '#22c55e', family_id = '<family-id>', family_member_role = 'member' where id = '<jj-auth-uid>';
 
-insert into public.subjects (name, position) values
-  ('Math', 0), ('Reading', 1), ('Science', 2), ('Other', 3);
+insert into public.subjects (name, position, family_id) values
+  ('Math', 0, '<family-id>'), ('Reading', 1, '<family-id>'), ('Science', 2, '<family-id>'), ('Other', 3, '<family-id>');
 
 -- Kid rotation order for chore zones — fixed here, no UI to change it later
 -- (matches the approved prototype, which has none either).
-insert into public.zone_rotation (start_date, interval_days, offset_cycles, member_order) values
-  (date_trunc('week', current_date)::date, 7, 0, array[
+insert into public.zone_rotation (family_id, start_date, interval_days, offset_cycles, member_order) values
+  ('<family-id>', date_trunc('week', current_date)::date, 7, 0, array[
     '<sara-auth-uid>'::uuid,
     '<david-auth-uid>'::uuid,
     '<jj-auth-uid>'::uuid
   ]);
 
 -- Starter zones — edit or add more later from the Zones tab as a parent.
-insert into public.zones (name, subzones) values
-  ('Kitchen', array['Dishes & counters','Sweep + mop floor','Take out trash']),
-  ('Bathrooms', array['Sinks & mirrors','Toilets','Empty trash']),
-  ('Living room + hallway', array['Vacuum','Dust shelves','Tidy shoes & coats']);
+insert into public.zones (name, subzones, family_id) values
+  ('Kitchen', array['Dishes & counters','Sweep + mop floor','Take out trash'], '<family-id>'),
+  ('Bathrooms', array['Sinks & mirrors','Toilets','Empty trash'], '<family-id>'),
+  ('Living room + hallway', array['Vacuum','Dust shelves','Tidy shoes & coats'], '<family-id>');
 
 select public.cron_ensure_zone_tasks();

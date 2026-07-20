@@ -102,6 +102,19 @@ Access rules enforced in Postgres (not just hidden in the UI):
    This creates the 5 `profiles` rows, default school subjects, the zone
    rotation order, and starter zones.
 
+   After this one-time bootstrap, use **Settings → Invite a family
+   member** (parent only) to add anyone else — it emails them a Supabase
+   Auth invite link and creates their `profiles` row automatically once
+   accepted (see `supabase/migrations/20260719130000_family_invites.sql`).
+   That flow needs the `send-invite` Edge Function deployed and a `SITE_URL`
+   secret set so the invite email links back to this app instead of
+   Supabase's default page:
+
+   ```bash
+   npx supabase functions deploy send-invite
+   npx supabase secrets set SITE_URL=<your-app-url>
+   ```
+
 7. Run the dev server:
 
    ```bash

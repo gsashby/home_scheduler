@@ -1,21 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
-  const [denied, setDenied] = useState(false);
+export default function SignupPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [signingIn, setSigningIn] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDenied(
-      new URLSearchParams(window.location.search).get("denied") === "1",
-    );
-  }, []);
 
   const signInWithGoogle = async () => {
     const supabase = createClient();
@@ -27,36 +21,40 @@ export default function LoginPage() {
     });
   };
 
-  const signInWithPassword = async (e: React.FormEvent) => {
+  async function signUp(e: React.FormEvent) {
     e.preventDefault();
-    setSigningIn(true);
     setError(null);
-    const { error } = await createClient().auth.signInWithPassword({
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await createClient().auth.signUp({
       email: email.trim(),
       password,
+      options: {
+        data: { display_name: name.trim() },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
-    setSigningIn(false);
+    setSubmitting(false);
     if (error) {
       setError(error.message);
       return;
     }
-    window.location.href = "/";
-  };
+    window.location.href = "/onboarding/choose";
+  }
 
   return (
     <main className="flex flex-1 items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6 text-center">
         <div>
-          <h1 className="text-2xl font-semibold">Home Scheduler</h1>
+          <h1 className="text-2xl font-semibold">Create your account</h1>
           <p className="mt-1 text-sm text-gray-600">
-            The family calendar, tasks, and chore zones — all in one place.
+            Next you&rsquo;ll create a new family or join one with an invite
+            code.
           </p>
         </div>
-        {denied && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            That account isn&rsquo;t set up as a family member on this app.
-          </p>
-        )}
         {error && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
@@ -67,16 +65,24 @@ export default function LoginPage() {
           onClick={signInWithGoogle}
           className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
         >
-          Sign in with Google
+          Continue with Google
         </button>
 
         <div className="flex items-center gap-3 text-xs text-gray-500">
           <span className="h-px flex-1 bg-gray-200" />
-          or sign in with email
+          or sign up with email
           <span className="h-px flex-1 bg-gray-200" />
         </div>
 
-        <form onSubmit={signInWithPassword} className="space-y-2.5 text-left">
+        <form onSubmit={signUp} className="space-y-2.5 text-left">
+          <input
+            type="text"
+            required
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+          />
           <input
             type="email"
             required
@@ -88,29 +94,26 @@ export default function LoginPage() {
           <input
             type="password"
             required
-            placeholder="Password"
+            minLength={8}
+            placeholder="Password (min. 8 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />
           <button
             type="submit"
-            disabled={signingIn}
+            disabled={submitting}
             className="w-full rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {signingIn ? "Signing in…" : "Sign in"}
+            {submitting ? "Creating account…" : "Create account"}
           </button>
         </form>
 
         <p className="text-sm text-gray-600">
-          New here?{" "}
-          <Link href="/signup" className="font-semibold text-indigo-600">
-            Create an account
+          Already have an account?{" "}
+          <Link href="/login" className="font-semibold text-indigo-600">
+            Sign in
           </Link>
-        </p>
-        <p className="text-xs text-gray-400">
-          Forgot your password? Password reset isn&rsquo;t available yet —
-          contact your family admin.
         </p>
       </div>
     </main>

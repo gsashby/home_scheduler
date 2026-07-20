@@ -1,0 +1,23 @@
+<!--
+  Custom invite template — overrides Supabase's default one so the link
+  goes to this app's own /auth/confirm route (server-verified token_hash)
+  instead of GoTrue's hosted /auth/v1/verify redirect, matching the
+  @supabase/ssr pattern used by src/app/auth/confirm/route.ts. Wired in via
+  supabase/config.toml's [auth.email.template.invite]. {{ .Data.* }} fields
+  come from the `data` object passed to admin.inviteUserByEmail() in
+  supabase/functions/send-invite/index.ts.
+-->
+<h2>You've been invited to join {{ .Data.family_name }} on Home Scheduler</h2>
+<p>
+  {{ .Data.invited_by_name }} invited you to join
+  <strong>{{ .Data.family_name }}</strong>'s shared calendar, tasks, and
+  chore list in Home Scheduler. Your family's data is private — no other
+  family can see or access it.
+</p>
+<p>
+  <a
+    href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/"
+    >Accept the invite</a
+  >
+</p>
+<p>This link is for {{ .Email }} and can only be used once.</p>

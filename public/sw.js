@@ -32,6 +32,12 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  // Only same-origin http(s) requests are cacheable. Leave everything else
+  // (cross-origin API calls, chrome-extension:// resources injected by
+  // extensions like password managers, etc) to the browser's default
+  // handling — the Cache API throws on unsupported schemes, and we don't
+  // want to cache third-party responses (e.g. Supabase auth) anyway.
+  if (new URL(request.url).origin !== self.location.origin) return;
 
   // Navigations: network-first so signed-in users always see fresh data
   // when online, falling back to the cached shell (or offline page) when not.

@@ -243,10 +243,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Custom invite template — points the link at this app's /auth/confirm
+# route instead of GoTrue's default hosted redirect (see
+# supabase/templates/invite.html and src/app/auth/confirm/route.ts).
+[auth.email.template.invite]
+subject = "You've been invited to Home Scheduler"
+content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
@@ -423,3 +425,9 @@ entrypoint = "./functions/send-push/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/send-push/*.html" ]
+
+[functions.send-invite]
+enabled = true
+verify_jwt = false
+import_map = "./functions/send-invite/deno.json"
+entrypoint = "./functions/send-invite/index.ts"

@@ -1,6 +1,8 @@
-// Hand-written to match supabase/migrations/20260719000001_init_schema.sql
-// exactly (no live Supabase project to run `supabase gen types` against
-// yet). Once a real project exists, regenerate with:
+// Hand-written to match supabase/migrations/20260719000001_init_schema.sql,
+// 20260719130000_family_invites.sql, 20260720000001_multi_tenant_families.sql,
+// and 20260720000002_family_invites_generalize.sql exactly (no live
+// Supabase project to run `supabase gen types` against yet). Once a real
+// project exists, regenerate with:
 //   npx supabase gen types typescript --project-id <project-ref> > src/lib/supabase/database.types.ts
 // and diff against this file before overwriting — some hand-tuned bits
 // (function arg/return shapes) may need to be re-applied.
@@ -11,6 +13,8 @@
 // `never`/`undefined` argument types instead of a visible error.
 
 export type FamilyRole = "parent" | "kid";
+export type FamilyMemberRole = "admin" | "member";
+export type InviteStatus = "pending" | "accepted" | "revoked";
 export type TaskStatus = "assigned" | "done" | "verified";
 export type TaskCategory =
   "school" | "work" | "home" | "personal" | "goal" | "zone";
@@ -20,6 +24,15 @@ export type NotifKind =
   "brief" | "deadline" | "nudge" | "update" | "sync" | "job";
 export type CalendarSharing = "family" | "parents" | "private";
 
+type FamiliesRow = {
+  id: string;
+  name: string;
+  invite_code: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type ProfilesRow = {
   id: string;
   display_name: string;
@@ -27,6 +40,8 @@ type ProfilesRow = {
   color: string;
   google_sync_enabled: boolean;
   calendar_sharing: CalendarSharing;
+  family_id: string | null;
+  family_member_role: FamilyMemberRole;
   created_at: string;
 };
 
@@ -34,6 +49,7 @@ type SubjectsRow = {
   id: string;
   name: string;
   position: number;
+  family_id: string;
   created_at: string;
 };
 
@@ -48,6 +64,7 @@ type CalendarEventsRow = {
   google_calendar_id: string | null;
   google_event_id: string | null;
   created_by: string;
+  family_id: string;
   created_at: string;
   updated_at: string;
 };
@@ -57,18 +74,19 @@ type ZonesRow = {
   name: string;
   subzones: string[];
   assigned_to: string | null;
+  family_id: string;
   created_at: string;
 };
 
 type ZoneRotationRow = {
-  id: boolean;
+  family_id: string;
   start_date: string;
   interval_days: number | null;
   offset_cycles: number;
   member_order: string[];
 };
 
-type ZoneDismissalsRow = { zone_id: string; cycle: number };
+type ZoneDismissalsRow = { zone_id: string; cycle: number; family_id: string };
 
 type JobsRow = {
   id: string;
@@ -77,6 +95,7 @@ type JobsRow = {
   status: JobStatus;
   taken_by: string | null;
   task_id: string | null;
+  family_id: string;
   created_at: string;
 };
 
@@ -94,6 +113,7 @@ type TasksRow = {
   zone_id: string | null;
   zone_cycle: number | null;
   job_id: string | null;
+  family_id: string;
   created_at: string;
   updated_at: string;
 };
@@ -104,6 +124,7 @@ type SubtasksRow = {
   title: string;
   done: boolean;
   position: number;
+  family_id: string;
 };
 
 type NotificationsRow = {
@@ -113,6 +134,7 @@ type NotificationsRow = {
   text: string;
   dedupe_key: string | null;
   read: boolean;
+  family_id: string;
   created_at: string;
 };
 
@@ -122,6 +144,7 @@ type PushSubscriptionsRow = {
   endpoint: string;
   p256dh: string;
   auth: string;
+  family_id: string;
   created_at: string;
 };
 
@@ -137,6 +160,19 @@ type Rel<
   referencedColumns: RefCols;
 };
 
+type FamilyInvitesRow = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: FamilyRole;
+  color: string;
+  invited_by: string;
+  family_id: string;
+  status: InviteStatus;
+  accepted_at: string | null;
+  created_at: string;
+};
+
 type GoogleTokensRow = {
   profile_id: string;
   access_token: string;
@@ -147,12 +183,23 @@ type GoogleTokensRow = {
   watch_channel_id: string | null;
   watch_resource_id: string | null;
   watch_expiration: string | null;
+  family_id: string;
   updated_at: string;
 };
 
 export type Database = {
   public: {
     Tables: {
+      families: {
+        Row: FamiliesRow;
+        Insert: Partial<FamiliesRow> & {
+          name: string;
+          invite_code: string;
+          created_by: string;
+        };
+        Update: Partial<FamiliesRow>;
+        Relationships: [Rel<["created_by"], "profiles", ["id"]>];
+      };
       profiles: {
         Row: ProfilesRow;
         Insert: Partial<ProfilesRow> & {
@@ -162,13 +209,13 @@ export type Database = {
           color: string;
         };
         Update: Partial<ProfilesRow>;
-        Relationships: [];
+        Relationships: [Rel<["family_id"], "families", ["id"]>];
       };
       subjects: {
         Row: SubjectsRow;
         Insert: Partial<SubjectsRow> & { name: string };
         Update: Partial<SubjectsRow>;
-        Relationships: [];
+        Relationships: [Rel<["family_id"], "families", ["id"]>];
       };
       calendar_events: {
         Row: CalendarEventsRow;
@@ -184,25 +231,35 @@ export type Database = {
         Relationships: [
           Rel<["member_id"], "profiles", ["id"]>,
           Rel<["created_by"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
         ];
       };
       zones: {
         Row: ZonesRow;
         Insert: Partial<ZonesRow> & { name: string };
         Update: Partial<ZonesRow>;
-        Relationships: [Rel<["assigned_to"], "profiles", ["id"]>];
+        Relationships: [
+          Rel<["assigned_to"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
       };
       zone_rotation: {
         Row: ZoneRotationRow;
-        Insert: Partial<ZoneRotationRow> & { start_date: string };
+        Insert: Partial<ZoneRotationRow> & {
+          family_id: string;
+          start_date: string;
+        };
         Update: Partial<ZoneRotationRow>;
-        Relationships: [];
+        Relationships: [Rel<["family_id"], "families", ["id"]>];
       };
       zone_dismissals: {
         Row: ZoneDismissalsRow;
         Insert: ZoneDismissalsRow;
         Update: Partial<ZoneDismissalsRow>;
-        Relationships: [Rel<["zone_id"], "zones", ["id"]>];
+        Relationships: [
+          Rel<["zone_id"], "zones", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
       };
       jobs: {
         Row: JobsRow;
@@ -211,6 +268,7 @@ export type Database = {
         Relationships: [
           Rel<["taken_by"], "profiles", ["id"]>,
           Rel<["task_id"], "tasks", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
         ];
       };
       tasks: {
@@ -229,13 +287,17 @@ export type Database = {
           Rel<["subject_id"], "subjects", ["id"]>,
           Rel<["zone_id"], "zones", ["id"]>,
           Rel<["job_id"], "jobs", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
         ];
       };
       subtasks: {
         Row: SubtasksRow;
         Insert: Partial<SubtasksRow> & { task_id: string; title: string };
         Update: Partial<SubtasksRow>;
-        Relationships: [Rel<["task_id"], "tasks", ["id"]>];
+        Relationships: [
+          Rel<["task_id"], "tasks", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
       };
       notifications: {
         Row: NotificationsRow;
@@ -245,7 +307,10 @@ export type Database = {
           text: string;
         };
         Update: Partial<NotificationsRow>;
-        Relationships: [Rel<["to_profile_id"], "profiles", ["id"]>];
+        Relationships: [
+          Rel<["to_profile_id"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
       };
       push_subscriptions: {
         Row: PushSubscriptionsRow;
@@ -256,7 +321,10 @@ export type Database = {
           auth: string;
         };
         Update: Partial<PushSubscriptionsRow>;
-        Relationships: [Rel<["profile_id"], "profiles", ["id"]>];
+        Relationships: [
+          Rel<["profile_id"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
       };
       google_tokens: {
         Row: GoogleTokensRow;
@@ -267,13 +335,40 @@ export type Database = {
           expiry: string;
         };
         Update: Partial<GoogleTokensRow>;
-        Relationships: [Rel<["profile_id"], "profiles", ["id"]>];
+        Relationships: [
+          Rel<["profile_id"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
+      };
+      family_invites: {
+        Row: FamilyInvitesRow;
+        Insert: Partial<FamilyInvitesRow> & {
+          email: string;
+          display_name: string;
+          role: FamilyRole;
+          color: string;
+          invited_by: string;
+        };
+        Update: Partial<FamilyInvitesRow>;
+        Relationships: [
+          Rel<["invited_by"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
       };
     };
     Views: Record<string, never>;
     Functions: {
       is_member: { Args: Record<string, never>; Returns: boolean };
       is_parent: { Args: Record<string, never>; Returns: boolean };
+      current_family_id: { Args: Record<string, never>; Returns: string | null };
+      is_family_admin: { Args: Record<string, never>; Returns: boolean };
+      create_family: { Args: { p_name: string }; Returns: FamiliesRow };
+      join_family_by_code: { Args: { p_code: string }; Returns: ProfilesRow };
+      regenerate_invite_code: { Args: Record<string, never>; Returns: string };
+      set_member_role: {
+        Args: { p_member_id: string; p_role: FamilyRole };
+        Returns: void;
+      };
       cycle_num: { Args: Record<string, never>; Returns: number };
       next_rotation_date: {
         Args: Record<string, never>;
@@ -348,9 +443,25 @@ export type Database = {
       mark_all_read: { Args: Record<string, never>; Returns: void };
       brief_line_for: { Args: { p_member_id: string }; Returns: string };
       send_daily_brief_all: { Args: Record<string, never>; Returns: void };
+      create_family_invite: {
+        Args: {
+          p_email: string;
+          p_display_name: string;
+          p_role: FamilyRole;
+          p_color: string;
+        };
+        Returns: string;
+      };
+      cancel_family_invite: { Args: { p_invite_id: string }; Returns: void };
+      accept_family_invite: {
+        Args: Record<string, never>;
+        Returns: ProfilesRow;
+      };
     };
     Enums: {
       family_role: FamilyRole;
+      family_member_role: FamilyMemberRole;
+      invite_status: InviteStatus;
       task_status: TaskStatus;
       task_category: TaskCategory;
       event_source: EventSource;
