@@ -155,7 +155,10 @@ Following the phased build order from the handoff spec:
 - [x] **Phase 3** — Zones tab, Job Board tab, Settings tab (all six tabs from
       the prototype now exist and build clean — `npm run lint` / `typecheck`
       / `build` all pass with zero errors)
-- [ ] **Phase 4** — Real web push (VAPID) + Edge Functions + pg_cron
+- [x] **Phase 4** — Real web push (VAPID) + Edge Functions + pg_cron (`send-push`
+      Edge Function delivers via web-push/VAPID; `supabase/migrations/20260719120000_web_push_cron.sql`
+      wires the `notifications` insert trigger to it over pg_net and schedules
+      the 7am daily brief + 5-minute deadline-alert checks via pg_cron)
 - [ ] **Phase 5** — Google Calendar two-way sync (Settings has the sharing
       preference UI wired to the database already; the actual OAuth
       connect flow is this phase)
