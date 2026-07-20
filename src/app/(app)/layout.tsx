@@ -27,7 +27,7 @@ export default async function AppLayout({
   // missing here, something upstream of onboarding is broken, not the
   // normal "hasn't picked a family yet" state.
   if (!me) {
-    redirect("/auth/error");
+    redirect("/auth/error?reason=missing_profile");
   }
 
   if (!me.family_id) {
