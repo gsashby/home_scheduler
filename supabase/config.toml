@@ -250,6 +250,12 @@ otp_expiry = 3600
 subject = "You've been invited to Home Scheduler"
 content_path = "./supabase/templates/invite.html"
 
+# Custom password-reset template — same reasoning as the invite template
+# above (see supabase/templates/recovery.html).
+[auth.email.template.recovery]
+subject = "Reset your Home Scheduler password"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

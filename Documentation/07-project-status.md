@@ -1,10 +1,10 @@
 # Project Status
 
 This reflects a direct read of the code as of **2026-07-21**, including
-the `accept_family_invite()` wiring in `src/app/(app)/layout.tsx`. The
-project is under active development — treat this as a snapshot, not a
-permanent contract. Cross-check against `git log` / `git status` before
-relying on specifics.
+the `accept_family_invite()` wiring, the Web Push subscribe flow, and the
+password reset flow. The project is under active development — treat
+this as a snapshot, not a permanent contract. Cross-check against
+`git log` / `git status` before relying on specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -43,11 +43,9 @@ invite auto-join (see "Resolved" below).
 
 ## Known gaps, verified by reading the code
 
-These aren't guesses — each was confirmed either by grepping for the
-missing piece or by a `tsc --noEmit` run.
-
-- **No password reset flow.** `/login` states this outright, and no
-  reset/forgot-password page or logic exists anywhere under `src/app`.
+None outside Phase 6 (above) as of this snapshot — every previously
+tracked gap (`/auth/error`, `accept_family_invite()` wiring, the Web Push
+subscribe flow, password reset) has been resolved; see below.
 
 ## Resolved since the previous snapshot (2026-07-20)
 
@@ -83,6 +81,11 @@ missing piece or by a `tsc --noEmit` run.
   lines). "Sharing" here means a per-event member picker controlling
   which family members see/attend a given event — distinct from the
   family-level invite/join system above.
+- **Password reset is now implemented.** `/login` → `/auth/reset-password`
+  → `resetPasswordForEmail()` → custom `recovery.html` email →
+  `/auth/confirm` (`type=recovery`) → `/auth/update-password` →
+  `updateUser({ password })`. See "Password reset" in
+  [04-auth-and-onboarding.md](./04-auth-and-onboarding.md).
 
 ## Things that look unfinished but are intentional
 

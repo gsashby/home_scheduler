@@ -14,8 +14,8 @@ Both `/login` and `/signup` (`src/app/login/page.tsx`,
 - **Google OAuth** — `supabase.auth.signInWithOAuth({ provider: "google",
   options: { redirectTo: "<origin>/auth/callback" } })`.
 - **Email + password** — `supabase.auth.signUp()` /
-  `signInWithPassword()` directly. Password reset is not implemented yet
-  (`/login` says so explicitly: "contact your family admin").
+  `signInWithPassword()` directly. Forgotten passwords go through
+  `/auth/reset-password` — see "Password reset" below.
 
 ## What happens on signup
 
@@ -115,6 +115,38 @@ the optional `/onboarding/invite` step right after creating a family.
 Invites can be revoked while still `pending` via
 `cancel_family_invite()` (soft-delete — `status = 'revoked'`, keeps an
 audit trail and frees the email for re-invite).
+
+## Password reset
+
+`/login` links to `/auth/reset-password` ("Forgot your password?"),
+following the same server-verified `token_hash` pattern as the invite flow
+above rather than Supabase's default hosted redirect:
+
+1. `/auth/reset-password` (`src/app/auth/reset-password/page.tsx`) takes
+   an email and calls `supabase.auth.resetPasswordForEmail(email, {
+   redirectTo: "<origin>/auth/update-password" })`. The response is
+   identical whether or not the email is registered — the UI never
+   reveals which, to avoid leaking account existence.
+2. The email uses the custom template
+   `supabase/templates/recovery.html` (wired in via
+   `supabase/config.toml`'s `[auth.email.template.recovery]`, same
+   mechanism as `[auth.email.template.invite]`), linking to
+   `/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/update-password`.
+3. `/auth/confirm/route.ts` — already generic over `type` — calls
+   `supabase.auth.verifyOtp({ type: "recovery", token_hash })`, which
+   establishes a (recovery) session, then redirects to `next`.
+4. `/auth/update-password` (`src/app/auth/update-password/page.tsx`)
+   checks for that session (`supabase.auth.getUser()`); if present, shows
+   a new-password form and calls `supabase.auth.updateUser({ password })`
+   on submit. No session (expired/already-used link, or a direct visit)
+   shows an error with a link back to request a new one.
+
+Like the invite template, `recovery.html`/`config.toml`'s
+`[auth.email.template.recovery]` only take effect against a project once
+applied there (`supabase config push`, or matched by hand in the
+dashboard's Auth → Templates) — `supabase db push` alone doesn't sync
+auth/email config, only migrations. This is the same pre-existing caveat
+as the invite email template, not something new to the reset flow.
 
 ## Manual/legacy bootstrap path
 

@@ -1,0 +1,22 @@
+<!--
+  Custom password-reset template — overrides Supabase's default one so the
+  link goes to this app's own /auth/confirm route (server-verified
+  token_hash) instead of GoTrue's hosted /auth/v1/verify redirect, same
+  pattern as invite.html. Wired in via supabase/config.toml's
+  [auth.email.template.recovery]. Lands on /auth/update-password, where
+  src/app/auth/update-password/page.tsx lets the now-recovery-session'd
+  user set a new password.
+-->
+<h2>Reset your Home Scheduler password</h2>
+<p>
+  We received a request to reset the password for this account ({{ .Email }}).
+  If you didn't ask for this, you can safely ignore this email — your password
+  won't change.
+</p>
+<p>
+  <a
+    href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/update-password"
+    >Reset your password</a
+  >
+</p>
+<p>This link is for {{ .Email }} and can only be used once.</p>
