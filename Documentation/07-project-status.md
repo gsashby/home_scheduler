@@ -21,10 +21,10 @@ this as a snapshot, not a permanent contract. Cross-check against
       Settings) drives a real OAuth connect → pick calendar → enable sync
       flow against `set_member_settings()`. Substantially complete, not a
       stub.
-- [ ] **Phase 6** — Offline support (partial — the service worker already
-      caches the app shell), CSV/ICS export, backups doc, Playwright tests.
-      No progress beyond what Phase 2 shipped: no Playwright config/tests,
-      no CSV/ICS export code, no backups doc found anywhere in the repo.
+- [ ] **Phase 6** — partially done. CSV/ICS export now shipped (see
+      below); offline support is still only what Phase 2 shipped (service
+      worker caches the app shell, nothing more); no backups doc; no
+      Playwright config/tests.
 
 ## Multi-tenant rework (in progress, on top of Phase 1–4)
 
@@ -43,9 +43,11 @@ invite auto-join (see "Resolved" below).
 
 ## Known gaps, verified by reading the code
 
-None outside Phase 6 (above) as of this snapshot — every previously
+Only what's left of Phase 6 (above): offline support beyond the app-shell
+cache, a backups doc, and Playwright tests. Every other previously
 tracked gap (`/auth/error`, `accept_family_invite()` wiring, the Web Push
-subscribe flow, password reset) has been resolved; see below.
+subscribe flow, password reset, CSV/ICS export) has been resolved; see
+below.
 
 ## Resolved since the previous snapshot (2026-07-20)
 
@@ -86,6 +88,13 @@ subscribe flow, password reset) has been resolved; see below.
   `/auth/confirm` (`type=recovery`) → `/auth/update-password` →
   `updateUser({ password })`. See "Password reset" in
   [04-auth-and-onboarding.md](./04-auth-and-onboarding.md).
+- **CSV/ICS export is now implemented** (`src/lib/export.ts`). "Export
+  .ics" on Calendar exports every event (all dates, honoring the member
+  filter chip) as a floating-local-time iCalendar file importable into
+  Google/Apple/Outlook calendars. "Export CSV" on Tasks and Jobs exports
+  the currently-filtered list. All client-side — no new Edge Function or
+  RPC needed, since the data is already RLS-scoped to the caller's family.
+  See [03-frontend.md](./03-frontend.md#library-helpers-srclib).
 
 ## Things that look unfinished but are intentional
 

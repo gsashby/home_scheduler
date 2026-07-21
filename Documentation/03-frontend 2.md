@@ -95,15 +95,6 @@ Access via the `useFamily()` hook. Throws if called outside the provider
   tasks under; `zone` tasks group under Home, `goal` under Personal).
 - **`notifications.ts`** — `NOTIF_KIND_LABELS` (human labels for each
   `notif_kind`).
-- **`export.ts`** — `toCSV()` / `toICS()` / `downloadFile()`: client-side
-  CSV/ICS export, no server round-trip (the data is already RLS-scoped to
-  the caller's own family — these just format what's in memory and
-  trigger a browser download via a Blob object URL). Used by the "Export
-  .ics" button on Calendar (all events, honoring the member filter chip,
-  across every date — not just the visible view) and "Export CSV" on
-  Tasks and Jobs. ICS events are emitted as floating local time (no
-  timezone), matching the app's single-family-timezone assumption (see
-  [05-notifications-and-push.md](./05-notifications-and-push.md)).
 - **`toast.tsx`** — `ToastProvider` / `useToast()`, mounted once in the
   `(app)` layout.
 - **`family-context.tsx`** — see above.
