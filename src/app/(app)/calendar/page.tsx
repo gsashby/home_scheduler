@@ -15,12 +15,13 @@ import {
   toISODate,
 } from "@/lib/date";
 import { Button, Card, Chip, Empty, Tag } from "@/components/ui";
-import { Field, Modal, Select, TextInput } from "@/components/modal";
+import { Field, Modal, Select, TextArea, TextInput } from "@/components/modal";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Event = Database["public"]["Tables"]["calendar_events"]["Row"];
 type Task = Database["public"]["Tables"]["tasks"]["Row"];
 type CalView = "day" | "3day" | "week";
+type AttendeesByEvent = Record<string, string[]>;
 
 export default function CalendarPage() {
   const { me, isParent, members, memberById } = useFamily();
@@ -30,7 +31,12 @@ export default function CalendarPage() {
   const [filter, setFilter] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [attendeesByEvent, setAttendeesByEvent] = useState<AttendeesByEvent>(
+    {},
+  );
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [newEventDate, setNewEventDate] = useState<string | null>(null);
 
   const days = useMemo(() => {
     const anchorDate = parseISODate(anchor);
@@ -66,6 +72,21 @@ export default function CalendarPage() {
     ]);
     setEvents(eventsRes.data ?? []);
     setTasks(tasksRes.data ?? []);
+
+    const eventIds = (eventsRes.data ?? []).map((e) => e.id);
+    if (eventIds.length === 0) {
+      setAttendeesByEvent({});
+      return;
+    }
+    const attendeesRes = await supabase
+      .from("calendar_event_attendees")
+      .select("event_id, member_id")
+      .in("event_id", eventIds);
+    const map: AttendeesByEvent = {};
+    for (const row of attendeesRes.data ?? []) {
+      (map[row.event_id] ??= []).push(row.member_id);
+    }
+    setAttendeesByEvent(map);
   }
 
   useEffect(() => {
@@ -87,6 +108,11 @@ export default function CalendarPage() {
         { event: "*", schema: "public", table: "tasks" },
         load,
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calendar_event_attendees" },
+        load,
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -98,13 +124,29 @@ export default function CalendarPage() {
     let evs = events.filter((e) => e.date === date);
     let tks = tasks.filter((t) => t.date === date);
     if (filter) {
-      evs = evs.filter((e) => e.member_id === filter);
+      evs = evs.filter(
+        (e) =>
+          e.member_id === filter ||
+          (attendeesByEvent[e.id] ?? []).includes(filter),
+      );
       tks = tks.filter((t) => t.member_id === filter);
     }
     return {
       evs: evs.sort((a, b) => (a.start_time < b.start_time ? -1 : 1)),
       tks,
     };
+  }
+
+  function openNewEvent(date: string) {
+    setEditingEvent(null);
+    setNewEventDate(date);
+    setModalOpen(true);
+  }
+
+  function openEditEvent(event: Event) {
+    setEditingEvent(event);
+    setNewEventDate(null);
+    setModalOpen(true);
   }
 
   const step = view === "week" ? 7 : view === "3day" ? 3 : 1;
@@ -149,7 +191,10 @@ export default function CalendarPage() {
           ›
         </Button>
         <div className="flex-1" />
-        <Button size="sm" onClick={() => setModalOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => openNewEvent(view === "day" ? days[0] : todayISO())}
+        >
           + Add event
         </Button>
       </div>
@@ -175,6 +220,8 @@ export default function CalendarPage() {
           date={days[0]}
           itemsForDay={itemsForDay}
           memberById={memberById}
+          attendeesByEvent={attendeesByEvent}
+          onSelectEvent={openEditEvent}
         />
       ) : (
         <>
@@ -209,22 +256,37 @@ export default function CalendarPage() {
                     </b>
                     <span>{parseISODate(d).getDate()}</span>
                   </h4>
-                  {evs.map((e) => (
-                    <div
-                      key={e.id}
-                      className="mb-1 truncate rounded-md px-1.5 py-1 text-[12px] leading-tight font-semibold text-white"
-                      style={{
-                        backgroundColor: memberById(e.member_id)?.color,
-                      }}
-                    >
-                      {fmtTime(e.start_time)} {e.title}
-                      {e.source === "google" && (
-                        <span className="ml-1 rounded bg-white/35 px-1 text-[9px]">
-                          G
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  {evs.map((e) => {
+                    const shareCount = (attendeesByEvent[e.id] ?? []).filter(
+                      (id) => id !== e.member_id,
+                    ).length;
+                    return (
+                      <div
+                        key={e.id}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          openEditEvent(e);
+                        }}
+                        className="mb-1 truncate rounded-md px-1.5 py-1 text-[12px] leading-tight font-semibold text-white"
+                        style={{
+                          backgroundColor: memberById(e.member_id)?.color,
+                        }}
+                      >
+                        {e.all_day ? "All day" : fmtTime(e.start_time)}{" "}
+                        {e.title}
+                        {e.source === "google" && (
+                          <span className="ml-1 rounded bg-white/35 px-1 text-[9px]">
+                            G
+                          </span>
+                        )}
+                        {shareCount > 0 && (
+                          <span className="ml-1 rounded bg-white/35 px-1 text-[9px]">
+                            +{shareCount}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                   {tks.map((t) => (
                     <div
                       key={t.id}
@@ -244,7 +306,8 @@ export default function CalendarPage() {
             })}
           </div>
           <div className="mt-1.5 text-xs text-gray-600">
-            Tap any day to drill in · ☑ = task · G = synced with Google Calendar
+            Tap any day to drill in · tap an event to edit · ☑ = task · G =
+            synced with Google Calendar · +N = also shared with N others
           </div>
         </>
       )}
@@ -252,12 +315,20 @@ export default function CalendarPage() {
       <EventModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        defaultDate={view === "day" ? days[0] : todayISO()}
+        event={editingEvent}
+        initialAttendeeIds={
+          editingEvent ? (attendeesByEvent[editingEvent.id] ?? []) : []
+        }
+        defaultDate={newEventDate ?? (view === "day" ? days[0] : todayISO())}
         isParent={isParent}
         me={me}
         members={members}
-        onSaved={(memberName) => {
-          toast(`Event added for ${memberName}`);
+        onSaved={(memberName, wasEdit) => {
+          toast(wasEdit ? "Event updated" : `Event added for ${memberName}`);
+          load();
+        }}
+        onDeleted={() => {
+          toast("Event deleted");
           load();
         }}
       />
@@ -269,12 +340,16 @@ function DayView({
   date,
   itemsForDay,
   memberById,
+  attendeesByEvent,
+  onSelectEvent,
 }: {
   date: string;
   itemsForDay: (d: string) => { evs: Event[]; tks: Task[] };
   memberById: (
     id: string,
   ) => { display_name: string; color: string } | undefined;
+  attendeesByEvent: AttendeesByEvent;
+  onSelectEvent: (event: Event) => void;
 }) {
   const { evs, tks } = itemsForDay(date);
   return (
@@ -290,13 +365,20 @@ function DayView({
       )}
       {evs.map((e) => {
         const owner = memberById(e.member_id);
+        const others = (attendeesByEvent[e.id] ?? [])
+          .filter((id) => id !== e.member_id)
+          .map((id) => memberById(id)?.display_name)
+          .filter(Boolean);
         return (
           <div
             key={e.id}
-            className="flex gap-2.5 border-b border-gray-100 py-2"
+            onClick={() => onSelectEvent(e)}
+            className="flex cursor-pointer gap-2.5 border-b border-gray-100 py-2"
           >
             <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-600">
-              {fmtTime(e.start_time)}–{fmtTime(e.end_time)}
+              {e.all_day
+                ? "All day"
+                : `${fmtTime(e.start_time)}–${fmtTime(e.end_time)}`}
             </div>
             <div
               className="flex-1 rounded-md px-2.5 py-1.5 text-sm font-semibold text-white"
@@ -306,7 +388,18 @@ function DayView({
               {e.source === "google" && <Tag tone="green">Google</Tag>}
               <small className="block font-medium opacity-85">
                 {owner?.display_name}
+                {others.length > 0 && ` · shared with ${others.join(", ")}`}
               </small>
+              {e.location && (
+                <small className="block font-medium opacity-85">
+                  📍 {e.location}
+                </small>
+              )}
+              {e.notes && (
+                <small className="block font-normal opacity-85">
+                  {e.notes}
+                </small>
+              )}
             </div>
           </div>
         );
@@ -340,64 +433,159 @@ function DayView({
 function EventModal({
   open,
   onClose,
+  event,
+  initialAttendeeIds,
   defaultDate,
   isParent,
   me,
   members,
   onSaved,
+  onDeleted,
 }: {
   open: boolean;
   onClose: () => void;
+  event: Event | null;
+  initialAttendeeIds: string[];
   defaultDate: string;
   isParent: boolean;
   me: { id: string; display_name: string };
   members: { id: string; display_name: string }[];
-  onSaved: (memberName: string) => void;
+  onSaved: (memberName: string, wasEdit: boolean) => void;
+  onDeleted: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [ownerId, setOwnerId] = useState(me.id);
   const [date, setDate] = useState(defaultDate);
   const [start, setStart] = useState("16:00");
   const [end, setEnd] = useState("17:00");
+  const [allDay, setAllDay] = useState(false);
+  const [location, setLocation] = useState("");
+  const [notes, setNotes] = useState("");
+  const [shareWith, setShareWith] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const canEdit = !event || isParent || event.member_id === me.id;
+
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    if (event) {
+      setTitle(event.title);
+      setOwnerId(event.member_id);
+      setDate(event.date);
+      setStart(fmtTime(event.start_time) || "16:00");
+      setEnd(fmtTime(event.end_time) || "17:00");
+      setAllDay(event.all_day);
+      setLocation(event.location ?? "");
+      setNotes(event.notes ?? "");
+      setShareWith(initialAttendeeIds);
+    } else {
       setTitle("");
       setOwnerId(me.id);
       setDate(defaultDate);
       setStart("16:00");
       setEnd("17:00");
+      setAllDay(false);
+      setLocation("");
+      setNotes("");
+      setShareWith([]);
     }
-  }, [open, defaultDate, me.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, event, defaultDate, me.id]);
+
+  function toggleShare(memberId: string) {
+    setShareWith((prev) =>
+      prev.includes(memberId)
+        ? prev.filter((id) => id !== memberId)
+        : [...prev, memberId],
+    );
+  }
 
   async function save() {
     if (!title.trim()) return;
     setSaving(true);
     const supabase = createClient();
     const memberId = isParent ? ownerId : me.id;
-    const { error } = await supabase.from("calendar_events").insert({
+    const payload = {
       title: title.trim(),
       member_id: memberId,
       date,
-      start_time: start,
-      end_time: end,
-      created_by: me.id,
-      source: "app",
-    });
+      start_time: allDay ? "00:00" : start,
+      end_time: allDay ? "23:59" : end,
+      all_day: allDay,
+      location: location.trim() || null,
+      notes: notes.trim() || null,
+    };
+
+    let eventId = event?.id;
+    if (event) {
+      const { error } = await supabase
+        .from("calendar_events")
+        .update(payload)
+        .eq("id", event.id);
+      if (error) {
+        setSaving(false);
+        return;
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .insert({ ...payload, created_by: me.id, source: "app" })
+        .select("id")
+        .single();
+      if (error || !data) {
+        setSaving(false);
+        return;
+      }
+      eventId = data.id;
+    }
+
+    const desired = new Set(shareWith.filter((id) => id !== memberId));
+    const initial = new Set(initialAttendeeIds.filter((id) => id !== memberId));
+    const toAdd = [...desired].filter((id) => !initial.has(id));
+    const toRemove = [...initial].filter((id) => !desired.has(id));
+    if (toAdd.length > 0) {
+      await supabase
+        .from("calendar_event_attendees")
+        .insert(toAdd.map((id) => ({ event_id: eventId!, member_id: id })));
+    }
+    if (toRemove.length > 0) {
+      await supabase
+        .from("calendar_event_attendees")
+        .delete()
+        .eq("event_id", eventId!)
+        .in("member_id", toRemove);
+    }
+
     setSaving(false);
-    if (error) return;
     onClose();
-    onSaved(members.find((m) => m.id === memberId)?.display_name ?? "");
+    onSaved(
+      members.find((m) => m.id === memberId)?.display_name ?? "",
+      !!event,
+    );
+  }
+
+  async function remove() {
+    if (!event) return;
+    setSaving(true);
+    const supabase = createClient();
+    await supabase.from("calendar_events").delete().eq("id", event.id);
+    setSaving(false);
+    onClose();
+    onDeleted();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add calendar event">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={event ? "Edit event" : "Add calendar event"}
+    >
       <Field label="Title">
         <TextInput
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g., Work shift, Practice, Appointment"
+          disabled={!canEdit}
         />
       </Field>
       <div className="grid grid-cols-2 gap-2.5">
@@ -406,6 +594,7 @@ function EventModal({
             <Select
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
+              disabled={!canEdit}
             >
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -424,38 +613,103 @@ function EventModal({
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            disabled={!canEdit}
           />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-2.5">
-        <Field label="Start">
-          <TextInput
-            type="time"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-          />
+      <label className="mb-2.5 flex items-center gap-2 text-xs font-semibold text-gray-600">
+        <input
+          type="checkbox"
+          checked={allDay}
+          onChange={(e) => setAllDay(e.target.checked)}
+          disabled={!canEdit}
+        />
+        All-day event
+      </label>
+      {!allDay && (
+        <div className="grid grid-cols-2 gap-2.5">
+          <Field label="Start">
+            <TextInput
+              type="time"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              disabled={!canEdit}
+            />
+          </Field>
+          <Field label="End">
+            <TextInput
+              type="time"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              disabled={!canEdit}
+            />
+          </Field>
+        </div>
+      )}
+      <Field label="Location (optional)">
+        <TextInput
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g., School gym, Grandma's house"
+          disabled={!canEdit}
+        />
+      </Field>
+      <Field label="Notes (optional)">
+        <TextArea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="Anything else the family should know"
+          disabled={!canEdit}
+        />
+      </Field>
+      {members.filter((m) => m.id !== ownerId).length > 0 && (
+        <Field label="Share with (optional)">
+          <div className="flex flex-wrap gap-1.5">
+            {members
+              .filter((m) => m.id !== ownerId)
+              .map((m) => (
+                <Chip
+                  key={m.id}
+                  active={shareWith.includes(m.id)}
+                  onClick={() => canEdit && toggleShare(m.id)}
+                  className={!canEdit ? "cursor-not-allowed opacity-60" : ""}
+                >
+                  {m.display_name}
+                </Chip>
+              ))}
+          </div>
         </Field>
-        <Field label="End">
-          <TextInput
-            type="time"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-          />
-        </Field>
-      </div>
+      )}
+      {!canEdit && (
+        <p className="mt-1 mb-2.5 text-xs text-gray-600">
+          Only {members.find((m) => m.id === event?.member_id)?.display_name} or
+          a parent can edit this event.
+        </p>
+      )}
       <div className="mt-1.5 flex justify-end gap-2">
+        {event && canEdit && (
+          <Button variant="danger" onClick={remove} disabled={saving}>
+            Delete
+          </Button>
+        )}
+        <div className="flex-1" />
         <Button variant="secondary" onClick={onClose}>
-          Cancel
+          {canEdit ? "Cancel" : "Close"}
         </Button>
-        <Button onClick={save} disabled={saving}>
-          Add event
-        </Button>
+        {canEdit && (
+          <Button onClick={save} disabled={saving}>
+            {event ? "Save changes" : "Add event"}
+          </Button>
+        )}
       </div>
-      <p className="mt-2.5 text-xs text-gray-600">
-        If this event&rsquo;s owner has Google Calendar connected with a
-        two-way sync target set (see Settings), this event will sync there
-        automatically.
-      </p>
+      {canEdit && (
+        <p className="mt-2.5 text-xs text-gray-600">
+          If this event&rsquo;s owner has Google Calendar connected with a
+          two-way sync target set (see Settings), this event will sync there
+          automatically.
+        </p>
+      )}
     </Modal>
   );
 }
