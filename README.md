@@ -216,12 +216,15 @@ Following the phased build order from the handoff spec:
       Cloud Console + secrets setup in step 7 above; not yet exercised
       against a real Google account (no live Supabase project in this
       environment — see "What done means so far" below).
-- [ ] **Phase 6** — CSV/ICS export, the backups doc, and a first
-      Playwright suite (`npm run test:e2e` — public pages + auth guards;
+- [x] **Phase 6** — CSV/ICS export, the backups doc, a first Playwright
+      suite (`npm run test:e2e` — public pages + auth guards;
       authenticated-flow coverage is a documented gap, see
-      `tests/e2e/authenticated/README.md`) are done; offline support
-      beyond the Phase 2 app-shell cache is not started — see
-      `Documentation/07-project-status.md` for current detail.
+      `tests/e2e/authenticated/README.md`), and offline support
+      (Supabase REST read caching + an offline banner, beyond the Phase 2
+      app-shell cache) are all done — see
+      `Documentation/07-project-status.md` for current detail, including
+      a caveat on how the offline caching itself was (and wasn't)
+      verified.
 
 **What "done" means so far**: the schema was validated by applying it to a
 real local Postgres instance and exercising every RPC function directly

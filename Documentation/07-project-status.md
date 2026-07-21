@@ -2,10 +2,10 @@
 
 This reflects a direct read of the code as of **2026-07-21**, including
 the `accept_family_invite()` wiring, the Web Push subscribe flow, the
-password reset flow, CSV/ICS export, the backups doc, and a first
-Playwright suite. The project is under active development — treat this
-as a snapshot, not a permanent contract. Cross-check against `git log` /
-`git status` before relying on specifics.
+password reset flow, CSV/ICS export, the backups doc, a first Playwright
+suite, and offline support. The project is under active development —
+treat this as a snapshot, not a permanent contract. Cross-check against
+`git log` / `git status` before relying on specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -22,10 +22,9 @@ as a snapshot, not a permanent contract. Cross-check against `git log` /
       Settings) drives a real OAuth connect → pick calendar → enable sync
       flow against `set_member_settings()`. Substantially complete, not a
       stub.
-- [ ] **Phase 6** — partially done. CSV/ICS export, the backups doc, and
-      a first Playwright suite are now shipped (see below); offline
-      support is still only what Phase 2 shipped (service worker caches
-      the app shell, nothing more).
+- [x] **Phase 6** — CSV/ICS export, the backups doc, a first Playwright
+      suite, and offline support (app-shell caching, a Supabase REST read
+      cache, an offline banner) are all shipped — see below.
 
 ## Multi-tenant rework (in progress, on top of Phase 1–4)
 
@@ -44,13 +43,13 @@ invite auto-join (see "Resolved" below).
 
 ## Known gaps, verified by reading the code
 
-Only what's left of Phase 6 (above): offline support beyond the
-app-shell cache, and authenticated-flow E2E coverage (sign-in, task/job/
-calendar CRUD, invites) — see `tests/e2e/authenticated/README.md` for
-that specific boundary. Every other previously tracked gap (`/auth/error`,
-`accept_family_invite()` wiring, the Web Push subscribe flow, password
-reset, CSV/ICS export, backups doc, a first Playwright suite) has been
-resolved; see below.
+Every phase-list item is now done. What remains: authenticated-flow E2E
+coverage (sign-in, task/job/calendar CRUD, invites) — see
+`tests/e2e/authenticated/README.md` — and the actual runtime behavior of
+the offline caching in `public/sw.js`, which is code-reviewed and
+reasoned about but not exercised through an automated test (see the note
+under "Offline support" below). Both are documented gaps, not silent
+ones.
 
 ## Resolved since the previous snapshot (2026-07-20)
 
@@ -119,6 +118,31 @@ resolved; see below.
   dev-mode gotcha: accessing the dev server via `127.0.0.1` instead of
   `localhost` silently breaks client hydration entirely (see
   [06-setup-guide.md](./06-setup-guide.md)).
+- **Offline support now goes beyond the app-shell cache** (`public/sw.js`):
+  Supabase REST `GET`s (`/rest/v1/*`) are now cached network-first,
+  auth-header-salted (so a shared device can't
+  serve one signed-in family member's cached data to another), so an
+  `(app)` tab that loses network doesn't blank its own state to `[]` when
+  its on-mount re-fetch rejects. `src/components/offline-banner.tsx`
+  shows "You're offline — showing the last data that loaded" so this
+  isn't silent. Writing the Playwright test for this
+  (`tests/e2e/offline.spec.ts`) also surfaced and fixed a real,
+  independent bug that predates this change: the navigation cache-write
+  in `sw.js` was `caches.open().then(...)`, detached from the promise
+  passed to `respondWith()`, so a service worker killed right after
+  responding could silently drop the write — pages visited while online
+  were never reliably ending up cached for offline use at all. Now
+  `await`ed everywhere. **Caveat**: Playwright could not verify the
+  fetch-interception behavior itself in this environment — even a
+  trivial, unconditional `fetch` event listener never received an event
+  for a navigation or an in-page `fetch()` call, in both headless and
+  headed mode, despite the worker reporting itself active/controlling.
+  This matches a known class of Playwright/CDP limitation around service
+  worker fetch dispatch, not a bug in the app; see the comment atop
+  `tests/e2e/offline.spec.ts`. Verify by hand (Chrome DevTools →
+  Application → Service Workers, or Network → Offline) before treating
+  the caching behavior itself as proven, as distinct from "the worker
+  registers and activates," which _is_ covered by that test.
 
 ## Things that look unfinished but are intentional
 
