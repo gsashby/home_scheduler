@@ -14,6 +14,18 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  {
+    // Edge Functions run under Deno, separate from the Next.js app's
+    // generated Database type — typing `ctx.supabaseAdmin` against it
+    // makes postgrest-js's insert/update/upsert argument types collapse to
+    // `never` (no schema to match against). These intentionally stay loose
+    // (`any` + a runtime interface cast), matching the existing
+    // send-push/send-invite convention.
+    files: ["supabase/functions/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

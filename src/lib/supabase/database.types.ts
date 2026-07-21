@@ -23,6 +23,8 @@ export type JobStatus = "open" | "taken" | "done" | "paid";
 export type NotifKind =
   "brief" | "deadline" | "nudge" | "update" | "sync" | "job";
 export type CalendarSharing = "family" | "parents" | "private";
+export type GoogleOutboxOperation = "create" | "update" | "delete";
+export type GoogleOutboxStatus = "pending" | "done" | "error";
 
 type FamiliesRow = {
   id: string;
@@ -178,13 +180,40 @@ type GoogleTokensRow = {
   access_token: string;
   refresh_token: string;
   expiry: string;
-  calendar_id: string | null;
-  sync_token: string | null;
-  watch_channel_id: string | null;
-  watch_resource_id: string | null;
-  watch_expiration: string | null;
+  scope: string | null;
   family_id: string;
   updated_at: string;
+};
+
+type GoogleCalendarSubscriptionsRow = {
+  id: string;
+  profile_id: string;
+  family_id: string;
+  google_calendar_id: string;
+  calendar_name: string;
+  enabled: boolean;
+  is_export_target: boolean;
+  sync_token: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type GoogleCalendarOutboxRow = {
+  id: string;
+  family_id: string;
+  profile_id: string;
+  calendar_event_id: string | null;
+  google_calendar_id: string;
+  google_event_id: string | null;
+  operation: GoogleOutboxOperation;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: GoogleOutboxStatus;
+  error_message: string | null;
+  created_at: string;
+  processed_at: string | null;
 };
 
 export type Database = {
@@ -340,6 +369,38 @@ export type Database = {
           Rel<["family_id"], "families", ["id"]>,
         ];
       };
+      google_calendar_subscriptions: {
+        Row: GoogleCalendarSubscriptionsRow;
+        Insert: Partial<GoogleCalendarSubscriptionsRow> & {
+          profile_id: string;
+          family_id: string;
+          google_calendar_id: string;
+          calendar_name: string;
+        };
+        Update: Partial<GoogleCalendarSubscriptionsRow>;
+        Relationships: [
+          Rel<["profile_id"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
+      };
+      google_calendar_outbox: {
+        Row: GoogleCalendarOutboxRow;
+        Insert: Partial<GoogleCalendarOutboxRow> & {
+          family_id: string;
+          profile_id: string;
+          google_calendar_id: string;
+          operation: GoogleOutboxOperation;
+          title: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+        };
+        Update: Partial<GoogleCalendarOutboxRow>;
+        Relationships: [
+          Rel<["profile_id"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
+      };
       family_invites: {
         Row: FamilyInvitesRow;
         Insert: Partial<FamilyInvitesRow> & {
@@ -457,6 +518,31 @@ export type Database = {
         Args: Record<string, never>;
         Returns: ProfilesRow;
       };
+      sync_upsert_imported_event: {
+        Args: {
+          p_family_id: string;
+          p_member_id: string;
+          p_google_calendar_id: string;
+          p_google_event_id: string;
+          p_title: string;
+          p_date: string;
+          p_start_time: string;
+          p_end_time: string;
+        };
+        Returns: string;
+      };
+      sync_delete_imported_event: {
+        Args: { p_google_calendar_id: string; p_google_event_id: string };
+        Returns: void;
+      };
+      sync_link_calendar_event: {
+        Args: {
+          p_calendar_event_id: string;
+          p_google_calendar_id: string;
+          p_google_event_id: string;
+        };
+        Returns: void;
+      };
     };
     Enums: {
       family_role: FamilyRole;
@@ -468,6 +554,8 @@ export type Database = {
       job_status: JobStatus;
       notif_kind: NotifKind;
       calendar_sharing: CalendarSharing;
+      google_outbox_operation: GoogleOutboxOperation;
+      google_outbox_status: GoogleOutboxStatus;
     };
   };
 };

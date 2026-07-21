@@ -431,3 +431,37 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/send-invite/deno.json"
 entrypoint = "./functions/send-invite/index.ts"
+
+# Called by the logged-in browser client (supabase.functions.invoke) — the
+# platform's default JWT check (verify_jwt = true) matches `auth: "user"`
+# below, so it's left at the default rather than set explicitly.
+[functions.google-calendar-connect]
+enabled = true
+import_map = "./functions/google-calendar-connect/deno.json"
+entrypoint = "./functions/google-calendar-connect/index.ts"
+
+# Google redirects the browser here directly (no caller JWT to check —
+# the signed `state` param authenticates the request instead).
+[functions.google-calendar-callback]
+enabled = true
+verify_jwt = false
+import_map = "./functions/google-calendar-callback/deno.json"
+entrypoint = "./functions/google-calendar-callback/index.ts"
+
+[functions.google-calendar-list]
+enabled = true
+import_map = "./functions/google-calendar-list/deno.json"
+entrypoint = "./functions/google-calendar-list/index.ts"
+
+[functions.google-calendar-select]
+enabled = true
+import_map = "./functions/google-calendar-select/deno.json"
+entrypoint = "./functions/google-calendar-select/index.ts"
+
+# Invoked by pg_cron via pg_net (see supabase/migrations), same
+# secret-key pattern as send-push/send-invite.
+[functions.google-calendar-sync]
+enabled = true
+verify_jwt = false
+import_map = "./functions/google-calendar-sync/deno.json"
+entrypoint = "./functions/google-calendar-sync/index.ts"

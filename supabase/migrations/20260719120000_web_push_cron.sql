@@ -3,11 +3,15 @@
 -- Session timezone: none of the schema's date/time logic (current_date,
 -- localtime, task deadlines, zone rotation math) carries a per-user
 -- timezone — it was written assuming the database's own timezone IS the
--- family's local time. Set both the database default and pg_cron's own
--- schedule-string timezone so "7am" means 7am Mountain Time (DST-aware),
--- not 7am UTC.
+-- family's local time.
 alter database postgres set timezone to 'America/Denver';
-alter database postgres set "cron.timezone" to 'America/Denver';
+-- NOT setting "cron.timezone" here: on this Supabase instance it's a
+-- restart-only parameter (`alter database ... set "cron.timezone" ...`
+-- fails with SQLSTATE 55P02, "cannot be changed without restarting the
+-- server") — this is almost certainly why this migration never
+-- successfully applied before. pg_cron schedule strings below therefore
+-- run in UTC, not Mountain Time; see the cron.schedule() calls near the
+-- bottom of this file for the resulting caveat on daily-brief's time.
 
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
@@ -109,7 +113,13 @@ begin
   end if;
 end $$;
 
--- 7am Mountain Time daily brief (also rolls zone chore tasks for the day).
+-- Intended as 7am Mountain Time, but cron.timezone couldn't be set above
+-- (see comment near the top of this file), so pg_cron runs this in UTC —
+-- '0 7 * * *' actually fires at 7am UTC (~1am Mountain during MDT, 12am
+-- during MST), not 7am local. Follow-up: either hardcode a UTC hour here
+-- (and accept it drifting an hour off at each DST transition) or find a
+-- way to get cron.timezone set on this project (may need a Supabase
+-- support request, since it looks like a restart-only parameter).
 select cron.schedule('daily-brief', '0 7 * * *', $$select public.cron_send_daily_brief()$$);
 
 -- Deadline alerts checked every 5 minutes; cron_generate_deadline_alerts()

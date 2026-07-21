@@ -58,7 +58,7 @@ Access rules enforced in Postgres (not just hidden in the UI):
 - Node.js 20.9+ (Next.js 16 requirement)
 - A free [Supabase](https://supabase.com) project
 - A [Google Cloud](https://console.cloud.google.com) OAuth client (sign-in,
-  and later the Calendar API for two-way sync)
+  and the Calendar API for two-way sync — see setup step 7)
 - The [Supabase CLI](https://supabase.com/docs/guides/cli) (`npx supabase`)
 
 ## Setup
@@ -115,7 +115,29 @@ Access rules enforced in Postgres (not just hidden in the UI):
    npx supabase secrets set SITE_URL=<your-app-url>
    ```
 
-7. Run the dev server:
+7. **Google Calendar two-way sync** (optional — each family member connects
+   their own account from Settings once this is set up): in Google Cloud
+   Console, enable the **Google Calendar API**, then add an authorized
+   redirect URI to your OAuth client for
+   `https://<project-ref>.supabase.co/functions/v1/google-calendar-callback`
+   (separate from the sign-in redirect URI from step 3 — this one is for
+   Calendar-scoped access, not login). Deploy the five
+   `google-calendar-*` Edge Functions and set their secrets:
+
+   ```bash
+   npx supabase functions deploy google-calendar-connect google-calendar-callback google-calendar-list google-calendar-select google-calendar-sync
+   npx supabase secrets set GOOGLE_CLIENT_ID=<your-oauth-client-id>
+   npx supabase secrets set GOOGLE_CLIENT_SECRET=<your-oauth-client-secret>
+   npx supabase secrets set GOOGLE_OAUTH_STATE_SECRET=<a-long-random-string>
+   ```
+
+   `google-calendar-sync` also needs the same `supabase_secret_key` Vault
+   secret (the project's real `sb_secret_...` key) that `send-push` already
+   depends on — see `supabase/migrations/20260719120000_web_push_cron.sql`
+   — set once via `vault.update_secret()` in the SQL editor, not through
+   `supabase secrets set`.
+
+8. Run the dev server:
 
    ```bash
    npm run dev
@@ -172,9 +194,22 @@ Following the phased build order from the handoff spec:
       Edge Function delivers via web-push/VAPID; `supabase/migrations/20260719120000_web_push_cron.sql`
       wires the `notifications` insert trigger to it over pg_net and schedules
       the 7am daily brief + 5-minute deadline-alert checks via pg_cron)
-- [ ] **Phase 5** — Google Calendar two-way sync (Settings has the sharing
-      preference UI wired to the database already; the actual OAuth
-      connect flow is this phase)
+- [x] **Phase 5** — Google Calendar two-way sync: each family member connects
+      their own account from Settings ("My Google Calendar"), picks which
+      calendars to import and which one new app events export to.
+      `google-calendar-connect`/`-callback` handle the OAuth consent flow
+      (signed `state` param, tokens stored in `google_tokens`);
+      `google-calendar-list`/`-select` populate and save the per-calendar
+      checklist (`google_calendar_subscriptions`); `google-calendar-sync`
+      runs on a 10-minute pg_cron schedule, importing Google's changes via
+      each calendar's incremental sync token and draining an outbox
+      (`google_calendar_outbox`, filled by a trigger on `calendar_events`)
+      to push app-created/edited/deleted events back to Google — see
+      `supabase/migrations/20260720000004_google_calendar_sync.sql` through
+      `20260720000006_google_calendar_sync_cron.sql`. Requires the Google
+      Cloud Console + secrets setup in step 7 above; not yet exercised
+      against a real Google account (no live Supabase project in this
+      environment — see "What done means so far" below).
 - [ ] **Phase 6** — Offline support, CSV/ICS export, backups doc, Playwright
       tests
 

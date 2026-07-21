@@ -452,8 +452,9 @@ function EventModal({
         </Button>
       </div>
       <p className="mt-2.5 text-xs text-gray-600">
-        Google Calendar two-way sync isn&rsquo;t connected yet for this
-        event&rsquo;s owner — see Settings once it ships.
+        If this event&rsquo;s owner has Google Calendar connected with a
+        two-way sync target set (see Settings), this event will sync there
+        automatically.
       </p>
     </Modal>
   );

@@ -7,13 +7,14 @@ import { useToast } from "@/lib/toast";
 import { Button, Card, Empty, Swatch, Tag } from "@/components/ui";
 import { Field, Modal, Select, TextInput } from "@/components/modal";
 import { InviteForm } from "@/components/invite-form";
+import { GoogleCalendarCard } from "@/components/google-calendar-card";
 import type { CalendarSharing, Database } from "@/lib/supabase/database.types";
 
 type Subject = Database["public"]["Tables"]["subjects"]["Row"];
 type FamilyInvite = Database["public"]["Tables"]["family_invites"]["Row"];
 
 export default function SettingsPage() {
-  const { isParent, isFamilyAdmin, members, family } = useFamily();
+  const { isParent, isFamilyAdmin, members, family, me } = useFamily();
   const toast = useToast();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectModal, setSubjectModal] = useState<Subject | null | "new">(
@@ -42,18 +43,35 @@ export default function SettingsPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("google");
+    if (result === "connected") toast("Google Calendar connected!");
+    else if (result === "error") {
+      toast("Couldn't connect Google Calendar — try again");
+    }
+    if (result) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (loading) return null;
 
   if (!isParent) {
     return (
-      <Card>
-        <Empty>Settings are managed by parents.</Empty>
-      </Card>
+      <div>
+        <GoogleCalendarCard me={me} />
+        <Card>
+          <Empty>Other settings are managed by parents.</Empty>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div>
+      <GoogleCalendarCard me={me} />
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
           🔒 {family.name}
@@ -200,9 +218,9 @@ export default function SettingsPage() {
           </table>
         </div>
         <p className="mt-3 text-xs text-gray-600">
-          These control who a person&rsquo;s Google Calendar is shared with once
-          it&rsquo;s connected. Connecting a real Google account (OAuth) is the
-          next piece of this build — see the README build status.
+          These control whether a person&rsquo;s Google Calendar syncs at all,
+          and who sees it once it&rsquo;s connected. Each person connects
+          their own account from &ldquo;My Google Calendar&rdquo; above.
         </p>
       </Card>
 
