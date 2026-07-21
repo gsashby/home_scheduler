@@ -1,9 +1,9 @@
 # Project Status
 
-This reflects a direct read of the code as of **2026-07-20**. The project
-is under active development — treat this as a snapshot, not a permanent
-contract. Cross-check against `git log` / `git status` before relying on
-specifics.
+This reflects a direct read of the code as of **2026-07-21** (commit
+`23dcb4e`). The project is under active development — treat this as a
+snapshot, not a permanent contract. Cross-check against `git log` /
+`git status` before relying on specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -12,37 +12,37 @@ specifics.
 - [x] **Phase 3** — Zones, Job Board, Settings tabs (all six tabs exist)
 - [x] **Phase 4** — Real Web Push (VAPID) + Edge Functions + `pg_cron`
       (delivery infra — see the client-side gap below)
-- [ ] **Phase 5** — Google Calendar two-way sync (Settings has the
-      sharing-preference UI wired to the database already; the OAuth
-      connect flow itself is this phase — `google_tokens` table and
-      `calendar_events.google_*` columns exist and are ready for it)
+- [x] **Phase 5** — Google Calendar two-way sync. All five
+      `google-calendar-{connect,callback,list,select,sync}` Edge Functions
+      exist, and `src/components/google-calendar-card.tsx` (wired into
+      Settings) drives a real OAuth connect → pick calendar → enable sync
+      flow against `set_member_settings()`. Substantially complete, not a
+      stub.
 - [ ] **Phase 6** — Offline support (partial — the service worker already
-      caches the app shell), CSV/ICS export, backups doc, Playwright tests
+      caches the app shell), CSV/ICS export, backups doc, Playwright tests.
+      No progress beyond what Phase 2 shipped: no Playwright config/tests,
+      no CSV/ICS export code, no backups doc found anywhere in the repo.
 
 ## Multi-tenant rework (in progress, on top of Phase 1–4)
 
-Not part of the original phase list — a later architectural change
-turning the single-household closed-allowlist app into a proper
-multi-tenant, self-serve-signup product. Migrations
+Not part of the original phase list — a later architectural change turning
+the single-household closed-allowlist app into a proper multi-tenant,
+self-serve-signup product. Migrations
 `20260720000001_multi_tenant_families.sql` and
-`20260720000002_family_invites_generalize.sql`, plus new/changed
-frontend under `src/app/onboarding/`, `src/app/signup/`,
-`src/app/(app)/layout.tsx`, `src/app/login/page.tsx`,
-`src/components/invite-form.tsx`. See
-[04-auth-and-onboarding.md](./04-auth-and-onboarding.md) for the full
-flow. This is mid-flight — several files touching it are uncommitted at
-the time of writing (`git status`).
+`20260720000002_family_invites_generalize.sql`, plus frontend under
+`src/app/onboarding/{layout,choose,join,invite,create}/page.tsx`,
+`src/app/signup/page.tsx`, `src/app/(app)/layout.tsx`,
+`src/app/login/page.tsx`, `src/components/invite-form.tsx`. See
+[04-auth-and-onboarding.md](./04-auth-and-onboarding.md) for the full flow.
+This is now fully committed (`git status` clean) and the onboarding/signup
+pages are complete, functional flows — not stubs. One gap remains, see
+below.
 
 ## Known gaps, verified by reading the code
 
 These aren't guesses — each was confirmed either by grepping for the
 missing piece or by a `tsc --noEmit` run.
 
-- **`/auth/error` route doesn't exist.** It's the redirect target from
-  `(app)/layout.tsx` (missing `profiles` row), `auth/callback/route.ts`,
-  and `auth/confirm/route.ts` (any OAuth/OTP failure), but there's no
-  `src/app/auth/error/` page — hitting any of those failure paths right
-  now is a 404 instead of a friendly error screen.
 - **Web Push has no client-side subscribe flow.** The full delivery
   pipeline (cron → `notifications` insert → trigger → `send-push` Edge
   Function → `web-push`) is built and wired, but nothing in the frontend
@@ -53,32 +53,41 @@ missing piece or by a `tsc --noEmit` run.
   notifications (the bell) are unaffected. See
   [05-notifications-and-push.md](./05-notifications-and-push.md).
 - **`accept_family_invite()` is defined but never called from the
-  frontend** (confirmed: no references outside the generated
-  `database.types.ts`). An invited user who clicks the emailed link and
-  completes `/auth/confirm` currently lands as a normal new signup
-  (`family_id = null` → `/onboarding/choose`) rather than being
-  auto-joined to the family that invited them. The invite record and
-  email delivery both work; only the final "match my email to my pending
-  invite and join" step is unwired.
-- **New families start with an empty zone rotation order.**
-  `create_family()` inserts a `zone_rotation` row with
-  `member_order = '{}'`. There's no Settings/Zones UI to populate it, so
-  any non-pinned zone (`zones.assigned_to is null`) won't resolve an
-  assignee for a brand-new family until `member_order` is set by hand in
-  SQL (or via the bootstrap template). Zones pinned to a specific member
-  work fine regardless.
-- **Google Calendar sync is UI-only.** Settings renders the per-member
-  sync toggle and sharing-preference selector, and they persist real
-  values via `set_member_settings()`, but there's no actual Google OAuth
-  connect flow or sync job yet (Phase 5, not started). The README's
-  Settings copy says this explicitly.
-- **No password reset flow.** `/login` states this outright.
+  frontend** (confirmed: the only reference outside
+  `database.types.ts` is zero — no calls anywhere in `src/`, including
+  `src/app/onboarding/join/page.tsx`). An invited user who clicks the
+  emailed link and completes `/auth/confirm` currently lands as a normal
+  new signup (`family_id = null` → `/onboarding/choose`) rather than
+  being auto-joined to the family that invited them. The invite record
+  and email delivery both work; only the final "match my email to my
+  pending invite and join" step is unwired.
+- **No password reset flow.** `/login` states this outright, and no
+  reset/forgot-password page or logic exists anywhere under `src/app`.
+
+## Resolved since the previous snapshot (2026-07-20)
+
+- **`/auth/error` route now exists** (`src/app/auth/error/page.tsx`),
+  handling `oauth` / `otp` / `missing_profile` failure reasons with a
+  friendly message and a link back to `/login`.
+- **Google Calendar sync is no longer UI-only** — see Phase 5 above.
+- **New families no longer start with an unfixable empty zone rotation.**
+  `create_family()` populates `zone_rotation.member_order` on creation,
+  and `src/app/(app)/zones/page.tsx` now has UI for parents to reorder or
+  pin zone assignees. (There is still no UI to edit the rotation order
+  independent of zone assignment — see "intentional" section below for
+  why that's by design.)
+- **Calendar events gained location, notes, all-day toggle, edit/delete,
+  and per-event sharing** (`src/app/(app)/calendar/page.tsx`, ~715
+  lines). "Sharing" here means a per-event member picker controlling
+  which family members see/attend a given event — distinct from the
+  family-level invite/join system above.
 
 ## Things that look unfinished but are intentional
 
-- `zone_rotation.member_order` has no editing UI *at all*, even for
-  established families — the original prototype has none either; it's
-  meant to be set once at setup time.
+- `zone_rotation.member_order` has no *dedicated* editing UI — the
+  original prototype has none either; it's meant to be set once at setup
+  time (now via `create_family()` at family creation, or the bootstrap
+  template for the original single-household flow).
 - `home-scheduler-prototype.html` at the project root is the frozen,
   approved UI/behavior spec, kept intentionally as a reference — it is
   not dead code to clean up.
