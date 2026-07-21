@@ -196,6 +196,24 @@ buckets."` — `[storage.vector] enabled = true` was a leftover
    connect and invite emails (still blocked on SMTP) and the daily-brief
    cron actually firing at the right wall-clock time (would need to wait
    for a real 7am Mountain tick to observe).
+8. **Hit for real, live, by the project owner**: `set_member_role()` had
+   no guard against demoting a family's only parent to kid. A
+   single-member family's sole "Dad" profile got demoted via Settings'
+   "Make kid" button, leaving zero parents — and no way back in through
+   the UI, since Settings' role controls are themselves parent-gated.
+   Fixed in two parts: (1) restored `Dad`'s `role` to `parent` directly
+   via the service-role REST API, after read-only lookups confirmed
+   exactly which row and that no other parent existed in that family;
+   (2) added a guard to `set_member_role()`
+   (`20260721000002_prevent_last_parent_demotion.sql`) refusing to demote
+   a `parent` to `kid` if they're the family's last one, raising `"Every
+family needs at least one parent -- promote someone else to parent
+first"`. Both applied to and verified against the real project — the
+   fix by direct query confirming `Dad`'s role, the guard by reproducing
+   the exact incident (a fresh solo-parent test family, clicking "Make
+   kid" on the only member) and confirming both the blocked role change
+   and the exact error text live in the browser, then cleaning up the
+   test account/family afterward.
 
 ## Resolved since the previous snapshot (2026-07-20)
 

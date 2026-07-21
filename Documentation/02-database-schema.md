@@ -13,17 +13,17 @@ doc describes the **current** (final) behavior.
 
 ## Enums
 
-| Enum | Values |
-| --- | --- |
-| `family_role` | `parent`, `kid` |
-| `family_member_role` | `admin`, `member` |
-| `task_status` | `assigned`, `done`, `verified` |
-| `task_category` | `school`, `work`, `home`, `personal`, `goal`, `zone` |
-| `event_source` | `app`, `google` |
-| `job_status` | `open`, `taken`, `done`, `paid` |
-| `notif_kind` | `brief`, `deadline`, `nudge`, `update`, `sync`, `job` |
-| `calendar_sharing` | `family`, `parents`, `private` |
-| `invite_status` | `pending`, `accepted`, `revoked` |
+| Enum                 | Values                                                |
+| -------------------- | ----------------------------------------------------- |
+| `family_role`        | `parent`, `kid`                                       |
+| `family_member_role` | `admin`, `member`                                     |
+| `task_status`        | `assigned`, `done`, `verified`                        |
+| `task_category`      | `school`, `work`, `home`, `personal`, `goal`, `zone`  |
+| `event_source`       | `app`, `google`                                       |
+| `job_status`         | `open`, `taken`, `done`, `paid`                       |
+| `notif_kind`         | `brief`, `deadline`, `nudge`, `update`, `sync`, `job` |
+| `calendar_sharing`   | `family`, `parents`, `private`                        |
+| `invite_status`      | `pending`, `accepted`, `revoked`                      |
 
 ## Tables
 
@@ -37,11 +37,11 @@ must go through a function in this doc.
 One row per tenant. `invite_code` is a unique, human-readable code
 (`WORD-1234`, generated from a 40-word list) used for self-serve join.
 
-| Column | Notes |
-| --- | --- |
-| `id`, `name`, `invite_code` | |
-| `created_by` | FK → `profiles` |
-| `created_at`, `updated_at` | `updated_at` auto-set by trigger |
+| Column                      | Notes                            |
+| --------------------------- | -------------------------------- |
+| `id`, `name`, `invite_code` |                                  |
+| `created_by`                | FK → `profiles`                  |
+| `created_at`, `updated_at`  | `updated_at` auto-set by trigger |
 
 No client-facing RLS write policy — updates go through
 `regenerate_invite_code()` (and family renaming, if/when built — see
@@ -54,13 +54,13 @@ One row per `auth.users` row, created automatically by the
 **every** authenticated user has a `profiles` row, even before they've
 joined a family (`family_id` starts `null`).
 
-| Column | Notes |
-| --- | --- |
-| `id` | = `auth.users.id` |
-| `display_name`, `color` | |
-| `role` | `family_role` — kid by default |
-| `family_id` | nullable; `null` = "signed up, not onboarded yet" |
-| `family_member_role` | `family_member_role` — member by default |
+| Column                                    | Notes                                              |
+| ----------------------------------------- | -------------------------------------------------- |
+| `id`                                      | = `auth.users.id`                                  |
+| `display_name`, `color`                   |                                                    |
+| `role`                                    | `family_role` — kid by default                     |
+| `family_id`                               | nullable; `null` = "signed up, not onboarded yet"  |
+| `family_member_role`                      | `family_member_role` — member by default           |
 | `google_sync_enabled`, `calendar_sharing` | Settings tab controls, via `set_member_settings()` |
 
 **RLS**: every family member can `SELECT` every other member's profile in
@@ -88,7 +88,7 @@ not-yet-built Google Calendar sync (see
 Chore-zone rotation. **RPC only** for writes.
 
 - `zones` — one row per chore area (e.g. "Kitchen"), with a `subzones
-  text[]` checklist and an optional `assigned_to` pin (non-null =
+text[]` checklist and an optional `assigned_to` pin (non-null =
   permanently assigned to one member, overriding rotation).
 - `zone_rotation` — one row per family. `member_order uuid[]` is the fixed
   rotation order (set once at family creation, currently empty until
@@ -147,13 +147,13 @@ service role (used by Edge Functions) can touch it.
 Email-based invite flow (parent/admin invites someone who isn't a member
 yet). **RPC only** for writes.
 
-| Column | Notes |
-| --- | --- |
+| Column                                   | Notes                                                 |
+| ---------------------------------------- | ----------------------------------------------------- |
 | `email`, `display_name`, `role`, `color` | Pre-filled profile the invitee will get on acceptance |
-| `invited_by` | FK → `profiles` |
-| `family_id` | which family they're being invited into |
-| `status` | `pending` / `accepted` / `revoked` |
-| `accepted_at` | set on acceptance |
+| `invited_by`                             | FK → `profiles`                                       |
+| `family_id`                              | which family they're being invited into               |
+| `status`                                 | `pending` / `accepted` / `revoked`                    |
+| `accepted_at`                            | set on acceptance                                     |
 
 Unique partial index on `(family_id, lower(email)) where status =
 'pending'` — only one live invite per email per family at a time;
@@ -170,28 +170,28 @@ exception back as an error from `supabase.rpc(...)`.
 
 ### Family creation / joining
 
-| Function | Args | Auth | Does |
-| --- | --- | --- | --- |
-| `create_family(p_name)` | name | signed in, not already in a family | Creates a `families` row with a generated invite code, sets caller as `admin`/`parent`, creates an empty `zone_rotation` row |
-| `join_family_by_code(p_code)` | invite code | not already in a family | Looks up `families.invite_code`, joins caller as `kid`/`member` (least-privilege; an admin promotes later) |
-| `regenerate_invite_code()` | — | `is_family_admin()` | Replaces the family's `invite_code` |
-| `current_family_id()` | — | any signed-in user | Returns caller's `family_id` (or `null`) |
-| `is_family_admin()` | — | — | Boolean helper |
+| Function                      | Args        | Auth                               | Does                                                                                                                         |
+| ----------------------------- | ----------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `create_family(p_name)`       | name        | signed in, not already in a family | Creates a `families` row with a generated invite code, sets caller as `admin`/`parent`, creates an empty `zone_rotation` row |
+| `join_family_by_code(p_code)` | invite code | not already in a family            | Looks up `families.invite_code`, joins caller as `kid`/`member` (least-privilege; an admin promotes later)                   |
+| `regenerate_invite_code()`    | —           | `is_family_admin()`                | Replaces the family's `invite_code`                                                                                          |
+| `current_family_id()`         | —           | any signed-in user                 | Returns caller's `family_id` (or `null`)                                                                                     |
+| `is_family_admin()`           | —           | —                                  | Boolean helper                                                                                                               |
 
 ### Zone rotation math
 
-| Function | Notes |
-| --- | --- |
-| `cycle_num()` | Current rotation cycle number for the caller's family, from `zone_rotation.interval_days`/`start_date`/`offset_cycles` |
-| `next_rotation_date()` | Next auto-rotation date, or `null` in manual mode |
-| `zone_assignee(p_zone_id)` | Resolves who has a zone this cycle: the pin (`zones.assigned_to`) if set, else `member_order[(zone_index + cycle) mod count]` |
-| `zones_with_assignee()` | All zones + computed assignee in one round trip (used by Today and Zones tabs) |
-| `ensure_zone_tasks()` | Idempotent: materializes each zone as a `tasks` row for its current assignee, drops stale ones from prior cycles/deleted zones. Safe to call on every page load. |
-| `rotate_now()` (parent only) | Advances `offset_cycles`, re-materializes tasks, notifies each newly-assigned member |
-| `set_zone_interval(p_interval_days)` (parent only) | Changes the rotation cadence (or sets manual mode with `null`) without reshuffling the current cycle's assignments |
-| `set_zone_assignee(p_zone_id, p_member_id)` (parent only) | Pins a zone to a member, or `null` to return it to rotation |
-| `save_zone(p_zone_id, p_name, p_subzones)` (parent only) | Create or update a zone; `null` id = create |
-| `delete_zone(p_zone_id)` (parent only) | Deletes a zone and its non-verified tasks |
+| Function                                                  | Notes                                                                                                                                                            |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cycle_num()`                                             | Current rotation cycle number for the caller's family, from `zone_rotation.interval_days`/`start_date`/`offset_cycles`                                           |
+| `next_rotation_date()`                                    | Next auto-rotation date, or `null` in manual mode                                                                                                                |
+| `zone_assignee(p_zone_id)`                                | Resolves who has a zone this cycle: the pin (`zones.assigned_to`) if set, else `member_order[(zone_index + cycle) mod count]`                                    |
+| `zones_with_assignee()`                                   | All zones + computed assignee in one round trip (used by Today and Zones tabs)                                                                                   |
+| `ensure_zone_tasks()`                                     | Idempotent: materializes each zone as a `tasks` row for its current assignee, drops stale ones from prior cycles/deleted zones. Safe to call on every page load. |
+| `rotate_now()` (parent only)                              | Advances `offset_cycles`, re-materializes tasks, notifies each newly-assigned member                                                                             |
+| `set_zone_interval(p_interval_days)` (parent only)        | Changes the rotation cadence (or sets manual mode with `null`) without reshuffling the current cycle's assignments                                               |
+| `set_zone_assignee(p_zone_id, p_member_id)` (parent only) | Pins a zone to a member, or `null` to return it to rotation                                                                                                      |
+| `save_zone(p_zone_id, p_name, p_subzones)` (parent only)  | Create or update a zone; `null` id = create                                                                                                                      |
+| `delete_zone(p_zone_id)` (parent only)                    | Deletes a zone and its non-verified tasks                                                                                                                        |
 
 Cron-only counterparts (no `auth.uid()` available, not granted to
 `authenticated`): `cron_ensure_zone_tasks()`. See
@@ -199,44 +199,44 @@ Cron-only counterparts (no `auth.uid()` available, not granted to
 
 ### Tasks
 
-| Function | Auth | Does |
-| --- | --- | --- |
-| `create_task(title, member_id, category, subject_id, date, deadline, remind_minutes, subtasks[])` | member; kids can only assign to themselves | Inserts task + subtasks; notifies the assignee if assigned by someone else |
-| `toggle_subtask(p_subtask_id)` | owner or parent | Flips `subtasks.done` |
-| `mark_task_done(p_task_id)` | must be the task's own member, task must be `assigned` | Sets `done`; if job-linked, marks the job `done` too; notifies all parents |
-| `verify_task(p_task_id)` | parent | Sets `verified`; if zone-linked, records a `zone_dismissals` row; if job-linked, marks job `paid` and notifies the earner; notifies the task's member |
-| `delete_task(p_task_id)` | parent, or (owner **and** creator **and** not zone-linked) | Idempotent delete; records a `zone_dismissals` row first if zone-linked |
-| `move_task(p_task_id)` | same rule as delete, task must not be `verified` | Pushes `date` forward one day |
-| `roll_all_tasks()` | parent | Bulk-moves every overdue `assigned` task to today; returns count |
-| `nudge_task(p_task_id)` | parent | Sends a `nudge` notification to the task's member |
+| Function                                                                                          | Auth                                                       | Does                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_task(title, member_id, category, subject_id, date, deadline, remind_minutes, subtasks[])` | member; kids can only assign to themselves                 | Inserts task + subtasks; notifies the assignee if assigned by someone else                                                                            |
+| `toggle_subtask(p_subtask_id)`                                                                    | owner or parent                                            | Flips `subtasks.done`                                                                                                                                 |
+| `mark_task_done(p_task_id)`                                                                       | must be the task's own member, task must be `assigned`     | Sets `done`; if job-linked, marks the job `done` too; notifies all parents                                                                            |
+| `verify_task(p_task_id)`                                                                          | parent                                                     | Sets `verified`; if zone-linked, records a `zone_dismissals` row; if job-linked, marks job `paid` and notifies the earner; notifies the task's member |
+| `delete_task(p_task_id)`                                                                          | parent, or (owner **and** creator **and** not zone-linked) | Idempotent delete; records a `zone_dismissals` row first if zone-linked                                                                               |
+| `move_task(p_task_id)`                                                                            | same rule as delete, task must not be `verified`           | Pushes `date` forward one day                                                                                                                         |
+| `roll_all_tasks()`                                                                                | parent                                                     | Bulk-moves every overdue `assigned` task to today; returns count                                                                                      |
+| `nudge_task(p_task_id)`                                                                           | parent                                                     | Sends a `nudge` notification to the task's member                                                                                                     |
 
 ### Jobs (work-for-hire board)
 
-| Function | Auth | Does |
-| --- | --- | --- |
-| `create_job(title, amount)` | parent | Creates `open` job; notifies every kid |
-| `take_job(p_job_id)` | non-parent member, job must be `open` | Claims it (`taken`), creates a linked task, notifies parents |
-| `job_done(p_job_id)` | must be the taker, job must be `taken` | Marks job + linked task `done`, notifies parents to verify/pay |
-| `pay_job(p_job_id)` | parent | Marks job `paid`, task `verified`, notifies the earner |
-| `delete_job(p_job_id)` | parent | Deletes job and its non-verified linked task |
+| Function                    | Auth                                   | Does                                                           |
+| --------------------------- | -------------------------------------- | -------------------------------------------------------------- |
+| `create_job(title, amount)` | parent                                 | Creates `open` job; notifies every kid                         |
+| `take_job(p_job_id)`        | non-parent member, job must be `open`  | Claims it (`taken`), creates a linked task, notifies parents   |
+| `job_done(p_job_id)`        | must be the taker, job must be `taken` | Marks job + linked task `done`, notifies parents to verify/pay |
+| `pay_job(p_job_id)`         | parent                                 | Marks job `paid`, task `verified`, notifies the earner         |
+| `delete_job(p_job_id)`      | parent                                 | Deletes job and its non-verified linked task                   |
 
 ### Settings / notifications
 
-| Function | Auth | Does |
-| --- | --- | --- |
-| `set_member_settings(member_id, google_sync, sharing)` | parent | Updates another member's sync/sharing prefs (either arg `null` leaves it unchanged) |
-| `set_member_role(member_id, role)` | `is_family_admin()` | Changes a member's `family_role` (parent/kid) within the same family |
-| `mark_all_read()` | self only | Marks caller's own unread notifications read |
-| `brief_line_for(member_id)` | any (stable/read-only) | Composes the "today" summary line (events/tasks/zone) for one person |
-| `send_daily_brief_all()` | parent | Manually triggers today's brief for the caller's whole family (also re-materializes zone tasks) |
+| Function                                               | Auth                   | Does                                                                                                                                                                                                              |
+| ------------------------------------------------------ | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `set_member_settings(member_id, google_sync, sharing)` | parent                 | Updates another member's sync/sharing prefs (either arg `null` leaves it unchanged)                                                                                                                               |
+| `set_member_role(member_id, role)`                     | `is_family_admin()`    | Changes a member's `family_role` (parent/kid) within the same family. Refuses to demote a family's last remaining parent to kid (raises "Every family needs at least one parent..." — see `07-project-status.md`) |
+| `mark_all_read()`                                      | self only              | Marks caller's own unread notifications read                                                                                                                                                                      |
+| `brief_line_for(member_id)`                            | any (stable/read-only) | Composes the "today" summary line (events/tasks/zone) for one person                                                                                                                                              |
+| `send_daily_brief_all()`                               | parent                 | Manually triggers today's brief for the caller's whole family (also re-materializes zone tasks)                                                                                                                   |
 
 ### Family invites (email-based)
 
-| Function | Auth | Does |
-| --- | --- | --- |
-| `create_family_invite(email, display_name, role, color)` | `is_family_admin()` | Validates email/dupes, inserts a `pending` invite; a trigger fires the `send-invite` Edge Function |
-| `cancel_family_invite(p_invite_id)` | `is_family_admin()` | Soft-revoke (`status = 'revoked'`), only while still `pending` |
-| `accept_family_invite()` | signed in, not already in a family | Matches caller's `auth.users.email` to a pending invite, joins that family (via the shared `_join_family()` helper), marks invite `accepted` |
+| Function                                                 | Auth                               | Does                                                                                                                                         |
+| -------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_family_invite(email, display_name, role, color)` | `is_family_admin()`                | Validates email/dupes, inserts a `pending` invite; a trigger fires the `send-invite` Edge Function                                           |
+| `cancel_family_invite(p_invite_id)`                      | `is_family_admin()`                | Soft-revoke (`status = 'revoked'`), only while still `pending`                                                                               |
+| `accept_family_invite()`                                 | signed in, not already in a family | Matches caller's `auth.users.email` to a pending invite, joins that family (via the shared `_join_family()` helper), marks invite `accepted` |
 
 ### Cron-only functions
 
