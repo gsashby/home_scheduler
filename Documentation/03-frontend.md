@@ -73,8 +73,12 @@ Access via the `useFamily()` hook. Throws if called outside the provider
 - **`src/components/modal.tsx`** — `Modal`, `Field` (labeled form row),
   `TextInput`, `Select`, `TextArea`.
 - **`src/components/shell.tsx`** — top bar (family name/privacy badge,
-  current user, notifications bell) + tab nav. Tab visibility: Zones and
-  Settings only render as nav links for `isParent`.
+  current user, notifications bell, sign out) + tab nav. Tab visibility:
+  Zones and Settings only render as nav links for `isParent`. Sign out
+  calls `supabase.auth.signOut()` then hard-redirects to `/login`
+  (`window.location.href`, not client-side routing, so no stale
+  `FamilyProvider` state survives into the next session on a shared
+  device).
 - **`src/components/notifications-bell.tsx`** — loads the caller's last
   100 notifications, subscribes to `INSERT`/`UPDATE` on `notifications`
   filtered to `to_profile_id=eq.<me>`, renders an unread-count badge and a

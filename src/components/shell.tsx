@@ -3,13 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFamily } from "@/lib/family-context";
+import { createClient } from "@/lib/supabase/client";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { OfflineBanner } from "@/components/offline-banner";
-import { Swatch } from "@/components/ui";
+import { Button, Swatch } from "@/components/ui";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { me, isParent, family } = useFamily();
   const pathname = usePathname();
+
+  async function signOut() {
+    await createClient().auth.signOut();
+    window.location.href = "/login";
+  }
 
   const tabs = [
     { href: "/", label: "Today" },
@@ -43,6 +49,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {me.display_name}
           </span>
           <NotificationsBell />
+          <Button size="sm" variant="secondary" onClick={signOut}>
+            Sign out
+          </Button>
         </div>
         <nav className="-mb-px flex gap-1 overflow-x-auto pt-2">
           {tabs.map((tab) => {

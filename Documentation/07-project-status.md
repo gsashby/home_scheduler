@@ -3,10 +3,11 @@
 This reflects a direct read of the code as of **2026-07-21**, including
 the `accept_family_invite()` wiring, the Web Push subscribe flow, the
 password reset flow, CSV/ICS export, the backups doc, a first Playwright
-suite, offline support, and the `config.toml` → production sync fix. The
-project is under active development — treat this as a snapshot, not a
-permanent contract. Cross-check against `git log` / `git status` before
-relying on specifics.
+suite, offline support, the `config.toml` → production sync fix, the
+daily-brief timezone/dedupe fix, and a sign-out flow. The project is
+under active development — treat this as a snapshot, not a permanent
+contract. Cross-check against `git log` / `git status` before relying on
+specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -51,6 +52,52 @@ the offline caching in `public/sw.js`, which is code-reviewed and
 reasoned about but not exercised through an automated test (see the note
 under "Offline support" below). Both are documented gaps, not silent
 ones.
+
+## Production readiness checklist
+
+A pass specifically asking "what's needed before a real family uses
+this," done after every phase-list item above was complete. Two real
+bugs surfaced and were fixed (see "Resolved" below); the rest is either
+mechanical setup (already covered in
+[06-setup-guide.md](./06-setup-guide.md)) or things worth knowing before
+launch rather than blocking it.
+
+**Fixed as part of this pass:**
+
+- The daily brief previously fired at the wrong time entirely (UTC, not
+  Mountain) — see `20260721000001_fix_daily_brief_timezone.sql` and
+  "Resolved" below.
+- No sign-out flow existed anywhere in the app — added to `Shell`.
+
+**Still to decide/do before launch, not yet acted on:**
+
+- Configure custom SMTP (`supabase/config.toml`'s `[auth.email.smtp]`,
+  currently commented out) — Supabase's default hosted email sender is
+  capped at 2/hour (`[auth.rate_limit]` `email_sent = 2`) and isn't
+  meant for production; invite and password-reset emails will be
+  unreliable/spam-flagged without this.
+- Change `supabase/config.toml`'s `site_url`/`additional_redirect_urls`
+  from the placeholder to the real production URL before running
+  `supabase config push` (see the comment above `site_url` in that file,
+  and [06-setup-guide.md](./06-setup-guide.md)).
+- **Nothing in this entire project has been run end-to-end in a live
+  browser against a real backend.** Every verification in this doc and
+  every commit's testing notes are typecheck/lint/build/Playwright
+  (public-pages tier)/code review — not a human clicking through
+  sign-up → create family → invite → assign a task → verify → post a
+  job → connect Google Calendar → receive a push notification. Do that
+  once, for real, before treating any of it as production-ready.
+- Confirm the family's actual timezone if not Mountain — same
+  `alter database postgres set timezone` mechanism as the daily-brief
+  fix uses.
+- Google Calendar sync has never been exercised against a real Google
+  account.
+- Basic error monitoring (none exists — a production error is currently
+  invisible until a person notices something's wrong).
+- No CI (`.github/workflows` doesn't exist) — lint/typecheck/build/tests
+  only run when someone remembers to run them locally.
+- Run `npm run backup` once real family data exists, and periodically
+  after (see [08-backups-and-recovery.md](./08-backups-and-recovery.md)).
 
 ## Resolved since the previous snapshot (2026-07-20)
 
@@ -160,6 +207,31 @@ ones.
   invite/reset emails and OAuth redirects point at someone else's app.
   Now called out both in a comment above `site_url` in `config.toml`
   itself and in the setup guide's Deployment section.
+- **The daily brief now actually fires at 7am local, and doesn't
+  double-send.** Two bugs, found in the same production-readiness pass:
+  (1) `cron.timezone` was never actually set (restart-only parameter on
+  this Supabase tier, fails with `SQLSTATE 55P02` — see the comment in
+  `20260719120000_web_push_cron.sql`), so the `0 7 * * *` schedule ran
+  at 7am UTC, not 7am Mountain — the brief was firing around
+  midnight–1am local the whole time. (2) `cron_send_daily_brief()`'s
+  per-day `dedupe_key` was silently dropped by a later migration's
+  rewrite of the function (`20260720000001_multi_tenant_families.sql`,
+  needed to loop over every family) — harmless while the job only ran
+  once a day at the wrong time, but would have sent duplicate pushes
+  once fix #1 changed the schedule to poll more often. Both fixed in
+  `20260721000001_fix_daily_brief_timezone.sql`: the job now runs every
+  15 minutes and the function itself guards on the database's own
+  (correctly-set) `timezone` GUC, only actually sending during the 7am
+  local hour, with the dedupe key restored. See
+  [05-notifications-and-push.md](./05-notifications-and-push.md). Not
+  run against a real `pg_cron` scheduler (no Docker/live project
+  available here) — reviewed, not tested live.
+- **A sign-out flow now exists.** `Shell` (top bar, every `(app)` page)
+  has a "Sign out" button — `supabase.auth.signOut()` then a hard
+  redirect (`window.location.href`, not client routing) to `/login`, so
+  no stale `FamilyProvider` state survives into whoever signs in next on
+  the same device. Wasn't tracked as a gap anywhere before this pass;
+  found by grepping for `signOut` and finding nothing.
 
 ## Things that look unfinished but are intentional
 
