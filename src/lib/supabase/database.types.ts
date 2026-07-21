@@ -62,6 +62,9 @@ type CalendarEventsRow = {
   date: string;
   start_time: string;
   end_time: string;
+  all_day: boolean;
+  location: string | null;
+  notes: string | null;
   source: EventSource;
   google_calendar_id: string | null;
   google_event_id: string | null;
@@ -69,6 +72,13 @@ type CalendarEventsRow = {
   family_id: string;
   created_at: string;
   updated_at: string;
+};
+
+type CalendarEventAttendeesRow = {
+  event_id: string;
+  member_id: string;
+  family_id: string;
+  created_at: string;
 };
 
 type ZonesRow = {
@@ -263,6 +273,19 @@ export type Database = {
           Rel<["family_id"], "families", ["id"]>,
         ];
       };
+      calendar_event_attendees: {
+        Row: CalendarEventAttendeesRow;
+        Insert: Partial<CalendarEventAttendeesRow> & {
+          event_id: string;
+          member_id: string;
+        };
+        Update: Partial<CalendarEventAttendeesRow>;
+        Relationships: [
+          Rel<["event_id"], "calendar_events", ["id"]>,
+          Rel<["member_id"], "profiles", ["id"]>,
+          Rel<["family_id"], "families", ["id"]>,
+        ];
+      };
       zones: {
         Row: ZonesRow;
         Insert: Partial<ZonesRow> & { name: string };
@@ -421,7 +444,10 @@ export type Database = {
     Functions: {
       is_member: { Args: Record<string, never>; Returns: boolean };
       is_parent: { Args: Record<string, never>; Returns: boolean };
-      current_family_id: { Args: Record<string, never>; Returns: string | null };
+      current_family_id: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
       is_family_admin: { Args: Record<string, never>; Returns: boolean };
       create_family: { Args: { p_name: string }; Returns: FamiliesRow };
       join_family_by_code: { Args: { p_code: string }; Returns: ProfilesRow };
