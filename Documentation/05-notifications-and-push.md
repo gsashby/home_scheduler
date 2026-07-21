@@ -49,18 +49,39 @@ Set up in `supabase/migrations/20260719120000_web_push_cron.sql`.
    `/tasks`, `job` → `/jobs`); `notificationclick` focuses or opens that
    URL.
 
-### Known gap: nothing subscribes the client yet
+## Client-side subscribe flow
 
-The pieces above assume a `push_subscriptions` row already exists for the
-recipient, but as of this writing there is **no code that calls
-`pushManager.subscribe()`** and writes the resulting subscription (with
-the `VAPID_PUBLIC_KEY`) into `push_subscriptions`.
-`service-worker-register.tsx` only registers the service worker itself —
-it doesn't request notification permission or create a push
-subscription. Until that's added, `send-push` will find zero
-subscriptions for every recipient and Web Push will silently deliver
-nothing (in-app notifications still work fine). See
-[07-project-status.md](./07-project-status.md).
+`src/components/push-notifications-card.tsx` — rendered in Settings for
+every member (parent and kid alike; push is per-device, not
+role-gated) — is what actually creates the `push_subscriptions` row the
+delivery pipeline above depends on:
+
+1. Checks support (`"serviceWorker" in navigator && "PushManager" in
+   window`) and current `Notification.permission` / existing
+   subscription (`registration.pushManager.getSubscription()`) on mount,
+   rendering one of: unsupported, blocked (`denied`), not-yet-enabled, or
+   enabled.
+2. **Enable**: `Notification.requestPermission()` → on grant,
+   `registration.pushManager.subscribe({ userVisibleOnly: true,
+   applicationServerKey: <NEXT_PUBLIC_VAPID_PUBLIC_KEY> })` → upserts
+   `{ profile_id, endpoint, p256dh, auth }` into `push_subscriptions`
+   (`onConflict: "endpoint"`, matching the table's `unique` constraint on
+   `endpoint` — the same physical subscription re-enabled on the same
+   device updates its row rather than erroring). `family_id` isn't sent
+   from the client; the `push_subscriptions_force_family_id` trigger
+   fills it from `current_family_id()`.
+3. **Disable**: deletes the `push_subscriptions` row for the current
+   subscription's `endpoint`, then calls `subscription.unsubscribe()`.
+
+This needs `NEXT_PUBLIC_VAPID_PUBLIC_KEY` set in `.env.local` (and in
+Vercel for production) to the *same* public key given to the `send-push`
+Edge Function as its `VAPID_PUBLIC_KEY` secret — see
+[06-setup-guide.md](./06-setup-guide.md). VAPID public keys aren't
+secret, so exposing this one to the browser is safe; only the matching
+private key must stay server-side.
+
+In-app notifications (the bell, via Realtime) never depend on any of
+this and work regardless of whether push was ever enabled on a device.
 
 ## Scheduled jobs (`pg_cron` + `pg_net`)
 

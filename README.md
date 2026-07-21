@@ -80,14 +80,20 @@ Access rules enforced in Postgres (not just hidden in the UI):
    Google OAuth client ID/secret, with redirect URL
    `<your-app-url>/auth/callback`.
 
-4. Generate a Web Push (VAPID) key pair:
+4. Generate a Web Push (VAPID) key pair, deploy the `send-push` Edge
+   Function, and give it the keys as secrets (the Edge Function reads
+   these from its own Supabase secrets, not from `.env.local`):
 
    ```bash
    npx web-push generate-vapid-keys
+   npx supabase functions deploy send-push
+   npx supabase secrets set VAPID_PUBLIC_KEY=<the-public-key> VAPID_PRIVATE_KEY=<the-private-key>
    ```
 
 5. Copy `.env.example` to `.env.local` and fill in the values from steps
-   2–4:
+   2–4, including `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — the same public key as
+   above, just also given to the browser so it can call
+   `pushManager.subscribe()` (VAPID public keys aren't secret):
 
    ```bash
    cp .env.example .env.local

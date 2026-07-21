@@ -18,8 +18,9 @@ This doc adds detail on *why* each step exists.
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Browser + server Supabase clients | Public — the project's REST/Auth endpoint |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server Supabase clients | Public — RLS still governs what it can do |
-| `VAPID_PUBLIC_KEY` | `send-push` Edge Function | From `npx web-push generate-vapid-keys` |
-| `VAPID_PRIVATE_KEY` | `send-push` Edge Function | Same command — **secret**, never expose to the client |
+| `VAPID_PUBLIC_KEY` | `send-push` Edge Function | From `npx web-push generate-vapid-keys`. Listed here for reference — the Edge Function actually reads it from its own Supabase secret (`supabase secrets set`), not from `.env.local` |
+| `VAPID_PRIVATE_KEY` | `send-push` Edge Function | Same command — **secret**, never expose to the client. Same caveat: set via `supabase secrets set`, not read from `.env.local` |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Browser (`push-notifications-card.tsx`) | Same value as `VAPID_PUBLIC_KEY` above, exposed to the client so `pushManager.subscribe()` can use it — VAPID public keys aren't secret |
 
 Two more secrets live outside `.env.local`, set directly against the
 Supabase project (not via Next.js env vars):
@@ -48,13 +49,15 @@ OAuth client id/secret, and set the redirect URL to
 
 ```bash
 npx web-push generate-vapid-keys   # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
-cp .env.example .env.local         # fill in the values above
+cp .env.example .env.local         # fill in the values above, including
+                                    # NEXT_PUBLIC_VAPID_PUBLIC_KEY = the same public key
 ```
 
 Deploy the two Edge Functions and set their secrets:
 
 ```bash
 npx supabase functions deploy send-push
+npx supabase secrets set VAPID_PUBLIC_KEY=<the-public-key> VAPID_PRIVATE_KEY=<the-private-key>
 npx supabase functions deploy send-invite
 npx supabase secrets set SITE_URL=<your-app-url>
 ```

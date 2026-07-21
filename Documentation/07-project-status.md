@@ -11,8 +11,10 @@ relying on specifics.
 - [x] **Phase 1** — Postgres schema, RLS, RPC business logic
 - [x] **Phase 2** — Next.js app shell: Today / Calendar / Tasks tabs
 - [x] **Phase 3** — Zones, Job Board, Settings tabs (all six tabs exist)
-- [x] **Phase 4** — Real Web Push (VAPID) + Edge Functions + `pg_cron`
-      (delivery infra — see the client-side gap below)
+- [x] **Phase 4** — Real Web Push (VAPID) + Edge Functions + `pg_cron`,
+      including the client-side subscribe flow
+      (`src/components/push-notifications-card.tsx`, in Settings for
+      every member)
 - [x] **Phase 5** — Google Calendar two-way sync. All five
       `google-calendar-{connect,callback,list,select,sync}` Edge Functions
       exist, and `src/components/google-calendar-card.tsx` (wired into
@@ -44,15 +46,6 @@ invite auto-join (see "Resolved" below).
 These aren't guesses — each was confirmed either by grepping for the
 missing piece or by a `tsc --noEmit` run.
 
-- **Web Push has no client-side subscribe flow.** The full delivery
-  pipeline (cron → `notifications` insert → trigger → `send-push` Edge
-  Function → `web-push`) is built and wired, but nothing in the frontend
-  calls `pushManager.subscribe()` or writes a `push_subscriptions` row —
-  `service-worker-register.tsx` only registers the service worker. Until
-  a subscribe UI/flow is added, push notifications won't reach any
-  device, even though the backend is fully functional. In-app
-  notifications (the bell) are unaffected. See
-  [05-notifications-and-push.md](./05-notifications-and-push.md).
 - **No password reset flow.** `/login` states this outright, and no
   reset/forgot-password page or logic exists anywhere under `src/app`.
 
@@ -70,6 +63,15 @@ missing piece or by a `tsc --noEmit` run.
   matching pending invite (an organic signup) reach the
   create-or-join screen. See
   [04-auth-and-onboarding.md](./04-auth-and-onboarding.md).
+- **Web Push now has a client-side subscribe flow.**
+  `src/components/push-notifications-card.tsx` (Settings, every member)
+  requests notification permission, calls `pushManager.subscribe()`, and
+  upserts the resulting `{ endpoint, p256dh, auth }` into
+  `push_subscriptions`. Setup now also deploys `send-push` and sets its
+  `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` secrets (previously missing from
+  the README/setup guide entirely) and adds
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY` for the browser. See
+  [05-notifications-and-push.md](./05-notifications-and-push.md).
 - **New families no longer start with an unfixable empty zone rotation.**
   `create_family()` populates `zone_rotation.member_order` on creation,
   and `src/app/(app)/zones/page.tsx` now has UI for parents to reorder or
