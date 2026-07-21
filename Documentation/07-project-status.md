@@ -182,10 +182,20 @@ buckets."` — `[storage.vector] enabled = true` was a leftover
    both Preview and Production in Vercel. Requires a fresh deployment to
    take effect — not yet re-verified live as of this writing (Vercel env
    var changes don't apply to already-built deployments).
-7. **Not yet tested live**: the actual push-subscribe round trip (blocked
-   on the redeploy above), Google Calendar OAuth connect, invite emails
-   (blocked on SMTP), and the daily-brief cron actually firing at the
-   right wall-clock time.
+7. **The redeploy landed and the fix is confirmed** — re-tested on the
+   fresh preview build: clicking "Enable push notifications" no longer
+   shows "Push isn't configured for this deployment yet," confirming
+   `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is now actually reaching the browser.
+   What's _not_ confirmed: an actual subscription being created and a
+   push notification being received. `Notification.requestPermission()`
+   opens a native OS-level permission dialog outside the page's DOM —
+   there's no human present in this environment to click "Allow," so
+   browser automation can't drive this part any further than confirming
+   the button no longer fails immediately. This needs a person to click
+   through it once, for real, same caveat as Google Calendar OAuth
+   connect and invite emails (still blocked on SMTP) and the daily-brief
+   cron actually firing at the right wall-clock time (would need to wait
+   for a real 7am Mountain tick to observe).
 
 ## Resolved since the previous snapshot (2026-07-20)
 
