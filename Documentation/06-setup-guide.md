@@ -47,14 +47,21 @@ npx supabase config push    # syncs supabase/config.toml itself -- see the
 
 `db push` and `config push` are separate and both needed: migrations
 (tables/RLS/functions) vs. everything in `config.toml` (auth settings,
-the custom invite/password-reset email templates in
-`[auth.email.template.*]`, pointing at `supabase/templates/*.html`).
-Skipping `config push` silently leaves the project on Supabase's default
-hosted email templates and redirect allow-list instead of this repo's —
-nothing fails loudly when it's missing, which is exactly why this step
-was absent from setup docs for a while even after the invite and
-password-reset flows started depending on it. Re-run it any time
-`config.toml` changes, not just once at setup.
+`additional_redirect_urls`, and — once SMTP is configured — the custom
+invite/password-reset email templates in `[auth.email.template.*]`,
+pointing at `supabase/templates/*.html`). Confirmed directly against a
+real project: `config push` doesn't silently skip the parts it can't
+apply, it **fails outright** — free-tier projects on Supabase's default
+email provider reject the whole push with "Email template modification
+is not available for free tier projects using the default email
+provider" the moment `[auth.email.template.*]` is present, even if
+everything else in the file is fine. That's why those two sections are
+commented out in the committed `config.toml` (re-enable once
+`[auth.email.smtp]` is configured and working) — otherwise `config push`
+never gets past them to apply anything else, including
+`additional_redirect_urls`, which the app's actual auth flows depend on
+(see the comment above that setting in `config.toml`). Re-run
+`config push` any time `config.toml` changes, not just once at setup.
 
 In **Supabase Auth settings**, enable the **Google** provider with your
 OAuth client id/secret, and set the redirect URL to
@@ -168,19 +175,26 @@ need manually re-applying after a real generation.
 
 Deploy to [Vercel](https://vercel.com) (Hobby tier is $0 and covers
 family scale). Set the same environment variables from `.env.local` in
-the Vercel project settings, with `NEXT_PUBLIC_SITE_URL` set to the
-production URL. Add `<production-url>/auth/callback` to the Google OAuth
-client's authorized redirect URIs alongside the localhost one.
+the Vercel project settings — **for every environment that needs them**;
+`NEXT_PUBLIC_*` vars must be set for Preview as well as Production if
+preview deployments (e.g. one per PR) should work, not just Production
+alone — with `NEXT_PUBLIC_SITE_URL` set to the production URL. Add
+`<production-url>/auth/callback` to the Google OAuth client's authorized
+redirect URIs alongside the localhost one.
 
-Also update `supabase/config.toml`'s `[auth]` `site_url` and
-`additional_redirect_urls` to your real production URL (the committed
-values are the original author's own deployment, meant to be changed —
-see the comment above `site_url` in that file) and re-run
-`npx supabase config push`. `site_url` is what gets baked into the
-invite/password-reset email links (`{{ .SiteURL }}` in
+If you're forking this repo for your own family's own Supabase project
+(rather than using the original author's — see the comment above
+`site_url` in `config.toml`), update `supabase/config.toml`'s `[auth]`
+`site_url` and `additional_redirect_urls` to your real production URL
+and re-run `npx supabase config push`. `site_url` is what gets baked
+into the invite/password-reset email links (`{{ .SiteURL }}` in
 `supabase/templates/*.html`) and what `additional_redirect_urls` gates
 for OAuth/magic-link/reset `redirectTo` values — get this wrong and
 those emails link back to someone else's app instead of yours.
+`additional_redirect_urls` needs the _exact subpaths_ the app actually
+redirects to (`/auth/callback`, `/auth/confirm`,
+`/auth/update-password` — see the comment above that setting in
+`config.toml`), not just the bare origin.
 
 ## Scripts
 

@@ -62,42 +62,130 @@ mechanical setup (already covered in
 [06-setup-guide.md](./06-setup-guide.md)) or things worth knowing before
 launch rather than blocking it.
 
-**Fixed as part of this pass:**
+This checklist was later actually exercised against the real project
+(`myzejnyxkzyxebaxyzko`, "Home Manager") and the real Vercel deployment —
+see "Live-verified" below for what changed as a result. Keeping the
+original pass's notes below since some items are still open.
+
+**Fixed as part of the code-review pass:**
 
 - The daily brief previously fired at the wrong time entirely (UTC, not
   Mountain) — see `20260721000001_fix_daily_brief_timezone.sql` and
   "Resolved" below.
 - No sign-out flow existed anywhere in the app — added to `Shell`.
 
-**Still to decide/do before launch, not yet acted on:**
+**Fixed live, against the real project (see "Live-verified" below for
+detail):** custom SMTP scaffolded (not yet activated — needs a real
+Resend account), the redirect-URL allowlist (was missing every actual
+subpath the app uses — confirmed broken, not just a placeholder issue),
+`storage.vector` blocking all of `config push`, `send-push` never having
+been deployed, and `NEXT_PUBLIC_VAPID_PUBLIC_KEY` never having been set
+in Vercel.
 
-- Configure custom SMTP (`supabase/config.toml`'s `[auth.email.smtp]`,
-  currently commented out) — Supabase's default hosted email sender is
-  capped at 2/hour (`[auth.rate_limit]` `email_sent = 2`) and isn't
-  meant for production; invite and password-reset emails will be
-  unreliable/spam-flagged without this.
-- Change `supabase/config.toml`'s `site_url`/`additional_redirect_urls`
-  from the placeholder to the real production URL before running
-  `supabase config push` (see the comment above `site_url` in that file,
-  and [06-setup-guide.md](./06-setup-guide.md)).
-- **Nothing in this entire project has been run end-to-end in a live
-  browser against a real backend.** Every verification in this doc and
-  every commit's testing notes are typecheck/lint/build/Playwright
-  (public-pages tier)/code review — not a human clicking through
-  sign-up → create family → invite → assign a task → verify → post a
-  job → connect Google Calendar → receive a push notification. Do that
-  once, for real, before treating any of it as production-ready.
+**Still open:**
+
+- Actually sign up for an SMTP provider (Resend recommended, scaffolded
+  in `config.toml`) and set `RESEND_API_KEY`, then uncomment
+  `[auth.email.smtp]` and the two `[auth.email.template.*]` sections and
+  run `config push` again — custom invite/password-reset emails still
+  fall back to Supabase's generic default templates until this happens.
 - Confirm the family's actual timezone if not Mountain — same
   `alter database postgres set timezone` mechanism as the daily-brief
   fix uses.
-- Google Calendar sync has never been exercised against a real Google
-  account.
+- Google Calendar sync has still never been exercised against a real
+  Google account (everything else now has been — see below).
 - Basic error monitoring (none exists — a production error is currently
   invisible until a person notices something's wrong).
 - No CI (`.github/workflows` doesn't exist) — lint/typecheck/build/tests
   only run when someone remembers to run them locally.
 - Run `npm run backup` once real family data exists, and periodically
   after (see [08-backups-and-recovery.md](./08-backups-and-recovery.md)).
+
+### Live-verified (2026-07-21) — what was actually run against the real project
+
+Everything above this heading, in every doc in this repo, was previously
+"reviewed but not run" for lack of a live backend. That changed: the
+Supabase CLI in this environment turned out to already be linked to the
+real project (`myzejnyxkzyxebaxyzko`, "Home Manager"), and a Vercel
+preview deployment already existed for this branch. With the project
+owner's explicit go-ahead, this pass actually touched the real
+infrastructure — read-only reconnaissance first, then fixes, in this
+order:
+
+1. **Migration history had already drifted.**
+   `supabase migration list` showed `20260720000007_calendar_event_details.sql`
+   as un-applied locally, but attempting `db push` failed with `column
+"location" of relation "calendar_events" already exists`. Read-only
+   introspection via the PostgREST OpenAPI root (service-role key,
+   `GET /rest/v1/`) confirmed the _entire_ migration's schema (columns
+   and the `calendar_event_attendees` table) already existed remotely —
+   it had been applied outside the tracked migration flow at some point.
+   Reconciled with `supabase migration repair --status applied
+20260720000007` (no schema changes; just fixes the tracking) rather
+   than risk re-running DDL that had already succeeded.
+2. **`db push` then applied `20260721000001_fix_daily_brief_timezone.sql`
+   cleanly.** Not independently verified that the cron actually fires at
+   the right time yet (would need to wait for a real 7am Mountain tick).
+3. **`config push` failed twice more, for two unrelated reasons,
+   before succeeding:**
+   - `"Email template modification is not available for free tier
+projects using the default email provider."` — confirms the custom
+     invite/recovery templates had _never_ successfully applied to this
+     project, ever, at any point before now. Both
+     `[auth.email.template.*]` sections were commented out (not
+     deleted) in `config.toml` to unblock everything else, with
+     instructions to re-enable once SMTP is configured.
+   - `"Please upgrade the project to a paid tier to enable vector
+buckets."` — `[storage.vector] enabled = true` was a leftover
+     default from whatever `supabase init` template generated this
+     `config.toml`; this app uses no vector/embedding features at all.
+     Set to `false`.
+   - Once past both, `config push` succeeded and is now idempotent
+     (confirmed by running it twice — both `up_to_date`).
+4. **The redirect-URL allowlist was actually broken, not just carrying a
+   placeholder risk.** `additional_redirect_urls` had two bare origins
+   (no paths). Researched Supabase's actual glob-matching rules (`.`
+   and `/` are separators; a bare origin does _not_ match any subpath)
+   and grepped every `redirectTo`/`emailRedirectTo` call in the codebase
+   to get the real list: `/auth/callback`, `/auth/confirm`,
+   `/auth/update-password`. None of the three were covered before this
+   fix — meaning Google sign-in, email/OAuth confirmation, and password
+   reset would all have been rejected or silently misrouted by Supabase
+   in production. Fixed in `config.toml`, confirmed pushed.
+5. **`send-push` had never been deployed to this project at all**
+   (`supabase functions list` showed `send-invite` and all five
+   `google-calendar-*` functions, but not `send-push`) — deployed now.
+   All required secrets (`VAPID_PUBLIC_KEY`/`_PRIVATE_KEY`/`_SUBJECT`,
+   `GOOGLE_CLIENT_ID`/`_SECRET`, `GOOGLE_OAUTH_STATE_SECRET`, `SITE_URL`)
+   were already set.
+6. **A real end-to-end browser run, via a Vercel preview deployment for
+   this exact PR branch** (found via `gh pr view`'s Vercel bot comment):
+   sign up with a real (test) email/password → landed on
+   `/onboarding/choose` (confirms `handle_new_user()` trigger fires
+   correctly) → created a family → landed on Today with the real daily
+   brief card, correct family name, correct tab set for a parent/admin →
+   signed out (confirmed the new `Shell` button both redirects _and_
+   actually ends the server-side session — re-visiting `/` after
+   bounced back to `/login`) → signed back in with the same
+   email/password → requested a password reset for a nonexistent
+   account at a real domain and confirmed the anti-enumeration message
+   (a request to `...@example.com` was separately rejected by Supabase
+   itself as an invalid/undeliverable domain — expected, unrelated to
+   this app's code) → opened Settings and found `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+   was never set in Vercel at all (the toggle correctly reported "Push
+   isn't configured for this deployment yet" rather than failing
+   silently). Since `push_subscriptions` had zero rows in production
+   (confirmed via a read-only count query — this feature had never been
+   exercised by a real user), rotated the VAPID key pair fresh rather
+   than trying to extract the existing one, updated the Supabase Edge
+   Function secrets to match, and added `NEXT_PUBLIC_VAPID_PUBLIC_KEY` to
+   both Preview and Production in Vercel. Requires a fresh deployment to
+   take effect — not yet re-verified live as of this writing (Vercel env
+   var changes don't apply to already-built deployments).
+7. **Not yet tested live**: the actual push-subscribe round trip (blocked
+   on the redeploy above), Google Calendar OAuth connect, invite emails
+   (blocked on SMTP), and the daily-brief cron actually firing at the
+   right wall-clock time.
 
 ## Resolved since the previous snapshot (2026-07-20)
 

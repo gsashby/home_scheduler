@@ -143,9 +143,14 @@ max_catalogs = 2
 # Analytics Buckets is available to Supabase Pro plan.
 # [storage.analytics.buckets.my-warehouse]
 
-# Store vector embeddings in S3 for large and durable datasets
+# Store vector embeddings in S3 for large and durable datasets. Not used
+# by this app at all (no embeddings/vector search anywhere in the
+# schema) -- left enabled = true here by whatever CLI template version
+# generated this config.toml, which blocked `config push` outright on a
+# Free-tier project ("Please upgrade the project to a paid tier to
+# enable vector buckets" -- confirmed against this exact project).
 [storage.vector]
-enabled = true
+enabled = false
 max_buckets = 10
 max_indexes = 5
 
@@ -157,18 +162,36 @@ enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
 #
-# home-scheduler-xi.vercel.app below is the original author's own Vercel
-# deployment, committed here as a placeholder -- if you're standing this
-# app up for your own family on your own Supabase project, change this
-# (and additional_redirect_urls below) to your own deployment URL before
-# running `supabase config push` (see 06-setup-guide.md), or your
-# project's invite/password-reset emails and OAuth redirects will point
-# at someone else's app instead of yours.
+# home-scheduler-xi.vercel.app below is the real production URL for this
+# app (confirmed, not a leftover placeholder) -- if you're forking this
+# repo to stand the app up for your own family on your own Supabase
+# project, change this (and additional_redirect_urls below) to your own
+# deployment URL before running `supabase config push` (see
+# 06-setup-guide.md), or your project's invite/password-reset emails and
+# OAuth redirects will point at someone else's app instead of yours.
 site_url = "https://home-scheduler-xi.vercel.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000", "https://home-scheduler-xi.vercel.app"]
+#
+# Supabase's redirect allow-list matches by glob, where "." and "/" are
+# separators -- a bare origin with no wildcard (what this used to be:
+# just "https://home-scheduler-xi.vercel.app") only matches that exact
+# URL with no path, NOT any subpath. Every actual redirectTo/
+# emailRedirectTo in this app targets a specific subpath (grep for
+# `redirectTo` under src/ and supabase/functions/), so each one needs its
+# own explicit entry below for every origin the app runs on -- otherwise
+# Supabase rejects the request or silently falls back to the bare
+# site_url, breaking Google sign-in, email confirmation, and password
+# reset. This was live-broken on this exact project until fixed here.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/confirm",
+  "http://localhost:3000/auth/update-password",
+  "https://home-scheduler-xi.vercel.app/auth/callback",
+  "https://home-scheduler-xi.vercel.app/auth/confirm",
+  "https://home-scheduler-xi.vercel.app/auth/update-password",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -241,28 +264,53 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# Use a production-ready SMTP server. Not optional in practice: Supabase's
+# default hosted email sender is capped at 2/hour ([auth.rate_limit]
+# above) and -- confirmed directly against this project by attempting
+# `supabase config push` -- free-tier projects using the default sender
+# can't even have custom email templates at all
+# ([auth.email.template.invite]/[auth.email.template.recovery] above);
+# the push fails outright with "Email template modification is not
+# available for free tier projects using the default email provider."
+# So until this is filled in and enabled, the invite and password-reset
+# flows silently fall back to Supabase's own generic default templates
+# instead of supabase/templates/*.html.
+#
+# Resend (resend.com) is a reasonable default choice: generous free tier,
+# SMTP setup is a few minutes. To activate:
+#   1. Sign up, verify a sending domain (or use their sandbox address for
+#      early testing -- sends only to your own account email until a
+#      domain is verified).
+#   2. Create an API key in the Resend dashboard.
+#   3. Uncomment below, set admin_email to a verified sender address, and
+#      run: RESEND_API_KEY=<your-api-key> npx supabase config push
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "notifications@your-verified-domain.com"
+# sender_name = "Home Scheduler"
 
 # Custom invite template — points the link at this app's /auth/confirm
 # route instead of GoTrue's default hosted redirect (see
 # supabase/templates/invite.html and src/app/auth/confirm/route.ts).
-[auth.email.template.invite]
-subject = "You've been invited to Home Scheduler"
-content_path = "./supabase/templates/invite.html"
+# TEMPORARILY DISABLED for `config push`: Supabase free-tier projects on
+# the default email provider reject template pushes outright ("Email
+# template modification is not available for free tier projects using
+# the default email provider") -- confirmed against this exact project.
+# Re-enable once SMTP (see [auth.email.smtp] above) is configured.
+# [auth.email.template.invite]
+# subject = "You've been invited to Home Scheduler"
+# content_path = "./supabase/templates/invite.html"
 
 # Custom password-reset template — same reasoning as the invite template
-# above (see supabase/templates/recovery.html).
-[auth.email.template.recovery]
-subject = "Reset your Home Scheduler password"
-content_path = "./supabase/templates/recovery.html"
+# above (see supabase/templates/recovery.html). Also temporarily disabled
+# for the same reason.
+# [auth.email.template.recovery]
+# subject = "Reset your Home Scheduler password"
+# content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
