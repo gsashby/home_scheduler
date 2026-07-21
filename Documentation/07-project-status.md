@@ -1,9 +1,10 @@
 # Project Status
 
-This reflects a direct read of the code as of **2026-07-21** (commit
-`23dcb4e`). The project is under active development — treat this as a
-snapshot, not a permanent contract. Cross-check against `git log` /
-`git status` before relying on specifics.
+This reflects a direct read of the code as of **2026-07-21**, including
+the `accept_family_invite()` wiring in `src/app/(app)/layout.tsx`. The
+project is under active development — treat this as a snapshot, not a
+permanent contract. Cross-check against `git log` / `git status` before
+relying on specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -35,8 +36,8 @@ self-serve-signup product. Migrations
 `src/app/login/page.tsx`, `src/components/invite-form.tsx`. See
 [04-auth-and-onboarding.md](./04-auth-and-onboarding.md) for the full flow.
 This is now fully committed (`git status` clean) and the onboarding/signup
-pages are complete, functional flows — not stubs. One gap remains, see
-below.
+pages are complete, functional flows — not stubs, including the email
+invite auto-join (see "Resolved" below).
 
 ## Known gaps, verified by reading the code
 
@@ -52,15 +53,6 @@ missing piece or by a `tsc --noEmit` run.
   device, even though the backend is fully functional. In-app
   notifications (the bell) are unaffected. See
   [05-notifications-and-push.md](./05-notifications-and-push.md).
-- **`accept_family_invite()` is defined but never called from the
-  frontend** (confirmed: the only reference outside
-  `database.types.ts` is zero — no calls anywhere in `src/`, including
-  `src/app/onboarding/join/page.tsx`). An invited user who clicks the
-  emailed link and completes `/auth/confirm` currently lands as a normal
-  new signup (`family_id = null` → `/onboarding/choose`) rather than
-  being auto-joined to the family that invited them. The invite record
-  and email delivery both work; only the final "match my email to my
-  pending invite and join" step is unwired.
 - **No password reset flow.** `/login` states this outright, and no
   reset/forgot-password page or logic exists anywhere under `src/app`.
 
@@ -70,6 +62,14 @@ missing piece or by a `tsc --noEmit` run.
   handling `oauth` / `otp` / `missing_profile` failure reasons with a
   friendly message and a link back to `/login`.
 - **Google Calendar sync is no longer UI-only** — see Phase 5 above.
+- **`accept_family_invite()` is now wired up.** `src/app/(app)/layout.tsx`
+  calls it whenever a signed-in user has `family_id is null`, before
+  falling through to `/onboarding/choose`. An invitee who clicks the
+  emailed link and completes `/auth/confirm` is now auto-joined to the
+  inviting family and lands straight in the app; only accounts with no
+  matching pending invite (an organic signup) reach the
+  create-or-join screen. See
+  [04-auth-and-onboarding.md](./04-auth-and-onboarding.md).
 - **New families no longer start with an unfixable empty zone rotation.**
   `create_family()` populates `zone_rotation.member_order` on creation,
   and `src/app/(app)/zones/page.tsx` now has UI for parents to reorder or

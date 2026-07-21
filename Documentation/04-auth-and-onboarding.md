@@ -95,19 +95,22 @@ the optional `/onboarding/invite` step right after creating a family.
    at this point they have an `auth.users` row and (via the same
    `on_auth_user_created` trigger as any signup) a `profiles` row with
    `family_id = null`.
-5. From here they're in the normal "no family yet" state, so the `(app)`
-   layout would send them to `/onboarding/choose` — **however**, the
-   intent of an email invite is for `accept_family_invite()` to run
-   automatically and skip that step, matching them to their pending
-   invite by email and joining them directly. Verify this wiring is
-   actually connected before relying on it — see
-   [07-project-status.md](./07-project-status.md) for the current status
-   of that specific piece.
-6. `accept_family_invite()` (when/where called): matches
-   `auth.users.email` (lowercased) against the newest `pending` invite
-   for that email, updates the caller's `display_name`/`color` from the
-   invite, joins the family via the shared `_join_family()` helper using
-   the invite's `role`, and marks the invite `accepted`.
+5. From here they're in the normal "no family yet" state
+   (`profiles.family_id is null`). The `(app)` layout
+   (`src/app/(app)/layout.tsx`) handles this: before falling through to
+   `/onboarding/choose`, it calls `accept_family_invite()`. If that
+   invitee has a pending invite matching their email, it joins them
+   directly and the layout continues rendering the app with their new
+   family — `/onboarding/choose` is only reached for accounts with no
+   matching invite (i.e. an organic signup).
+6. `accept_family_invite()`: matches `auth.users.email` (lowercased)
+   against the newest `pending` invite for that email, updates the
+   caller's `display_name`/`color` from the invite, joins the family via
+   the shared `_join_family()` helper using the invite's `role`, and
+   marks the invite `accepted`. Raises (so the RPC call returns
+   `data: null`) when there's no pending invite for the account's email —
+   the `(app)` layout treats that as the normal "no invite, go pick a
+   family" case rather than an error.
 
 Invites can be revoked while still `pending` via
 `cancel_family_invite()` (soft-delete — `status = 'revoked'`, keeps an
