@@ -216,8 +216,10 @@ Following the phased build order from the handoff spec:
       Cloud Console + secrets setup in step 7 above; not yet exercised
       against a real Google account (no live Supabase project in this
       environment — see "What done means so far" below).
-- [ ] **Phase 6** — Offline support, CSV/ICS export, backups doc, Playwright
-      tests
+- [ ] **Phase 6** — CSV/ICS export and the backups doc are done (see
+      `Documentation/08-backups-and-recovery.md`); offline support beyond
+      the Phase 2 app-shell cache and Playwright tests are not started —
+      see `Documentation/07-project-status.md` for current detail.
 
 **What "done" means so far**: the schema was validated by applying it to a
 real local Postgres instance and exercising every RPC function directly

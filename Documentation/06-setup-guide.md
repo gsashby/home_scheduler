@@ -1,7 +1,7 @@
 # Setup Guide
 
 For a condensed version of this, see the top-level [`README.md`](../README.md).
-This doc adds detail on *why* each step exists.
+This doc adds detail on _why_ each step exists.
 
 ## Prerequisites
 
@@ -14,13 +14,13 @@ This doc adds detail on *why* each step exists.
 
 ## Environment variables (`.env.local`, copy from `.env.example`)
 
-| Variable | Used by | Notes |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Browser + server Supabase clients | Public — the project's REST/Auth endpoint |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server Supabase clients | Public — RLS still governs what it can do |
-| `VAPID_PUBLIC_KEY` | `send-push` Edge Function | From `npx web-push generate-vapid-keys`. Listed here for reference — the Edge Function actually reads it from its own Supabase secret (`supabase secrets set`), not from `.env.local` |
-| `VAPID_PRIVATE_KEY` | `send-push` Edge Function | Same command — **secret**, never expose to the client. Same caveat: set via `supabase secrets set`, not read from `.env.local` |
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Browser (`push-notifications-card.tsx`) | Same value as `VAPID_PUBLIC_KEY` above, exposed to the client so `pushManager.subscribe()` can use it — VAPID public keys aren't secret |
+| Variable                        | Used by                                 | Notes                                                                                                                                                                                 |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Browser + server Supabase clients       | Public — the project's REST/Auth endpoint                                                                                                                                             |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server Supabase clients       | Public — RLS still governs what it can do                                                                                                                                             |
+| `VAPID_PUBLIC_KEY`              | `send-push` Edge Function               | From `npx web-push generate-vapid-keys`. Listed here for reference — the Edge Function actually reads it from its own Supabase secret (`supabase secrets set`), not from `.env.local` |
+| `VAPID_PRIVATE_KEY`             | `send-push` Edge Function               | Same command — **secret**, never expose to the client. Same caveat: set via `supabase secrets set`, not read from `.env.local`                                                        |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`  | Browser (`push-notifications-card.tsx`) | Same value as `VAPID_PUBLIC_KEY` above, exposed to the client so `pushManager.subscribe()` can use it — VAPID public keys aren't secret                                               |
 
 Two more secrets live outside `.env.local`, set directly against the
 Supabase project (not via Next.js env vars):
@@ -32,7 +32,7 @@ Supabase project (not via Next.js env vars):
   Vault entry with a `REPLACE_ME` placeholder; set the real value once
   via `vault.update_secret()` in the SQL editor.
 - **`SITE_URL`** (Edge Function secret, `npx supabase secrets set
-  SITE_URL=<url>`) — so invite emails link back to this app's
+SITE_URL=<url>`) — so invite emails link back to this app's
   `/auth/confirm` instead of Supabase's default confirmation page.
 
 ## First-time project setup
@@ -149,12 +149,13 @@ client's authorized redirect URIs alongside the localhost one.
 
 ## Scripts
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run start` | Run the production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run format` | Prettier, writes changes |
-| `npm run format:check` | Prettier, check only (CI) |
+| Command                | Purpose                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`          | Start the dev server                                                                                                                                    |
+| `npm run build`        | Production build                                                                                                                                        |
+| `npm run start`        | Run the production build                                                                                                                                |
+| `npm run lint`         | ESLint                                                                                                                                                  |
+| `npm run typecheck`    | `tsc --noEmit`                                                                                                                                          |
+| `npm run format`       | Prettier, writes changes                                                                                                                                |
+| `npm run format:check` | Prettier, check only (CI)                                                                                                                               |
+| `npm run backup`       | Dumps family data + accounts from the linked Supabase project (`scripts/backup-db.sh`) — see [08-backups-and-recovery.md](./08-backups-and-recovery.md) |

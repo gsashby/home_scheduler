@@ -1,10 +1,11 @@
 # Project Status
 
 This reflects a direct read of the code as of **2026-07-21**, including
-the `accept_family_invite()` wiring, the Web Push subscribe flow, and the
-password reset flow. The project is under active development — treat
-this as a snapshot, not a permanent contract. Cross-check against
-`git log` / `git status` before relying on specifics.
+the `accept_family_invite()` wiring, the Web Push subscribe flow, the
+password reset flow, CSV/ICS export, and the backups doc. The project is
+under active development — treat this as a snapshot, not a permanent
+contract. Cross-check against `git log` / `git status` before relying on
+specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -21,9 +22,9 @@ this as a snapshot, not a permanent contract. Cross-check against
       Settings) drives a real OAuth connect → pick calendar → enable sync
       flow against `set_member_settings()`. Substantially complete, not a
       stub.
-- [ ] **Phase 6** — partially done. CSV/ICS export now shipped (see
-      below); offline support is still only what Phase 2 shipped (service
-      worker caches the app shell, nothing more); no backups doc; no
+- [ ] **Phase 6** — partially done. CSV/ICS export and the backups doc
+      now shipped (see below); offline support is still only what Phase 2
+      shipped (service worker caches the app shell, nothing more); no
       Playwright config/tests.
 
 ## Multi-tenant rework (in progress, on top of Phase 1–4)
@@ -44,9 +45,9 @@ invite auto-join (see "Resolved" below).
 ## Known gaps, verified by reading the code
 
 Only what's left of Phase 6 (above): offline support beyond the app-shell
-cache, a backups doc, and Playwright tests. Every other previously
-tracked gap (`/auth/error`, `accept_family_invite()` wiring, the Web Push
-subscribe flow, password reset, CSV/ICS export) has been resolved; see
+cache, and Playwright tests. Every other previously tracked gap
+(`/auth/error`, `accept_family_invite()` wiring, the Web Push subscribe
+flow, password reset, CSV/ICS export, backups doc) has been resolved; see
 below.
 
 ## Resolved since the previous snapshot (2026-07-20)
@@ -95,10 +96,18 @@ below.
   the currently-filtered list. All client-side — no new Edge Function or
   RPC needed, since the data is already RLS-scoped to the caller's family.
   See [03-frontend.md](./03-frontend.md#library-helpers-srclib).
+- **A backups doc now exists**
+  ([08-backups-and-recovery.md](./08-backups-and-recovery.md)), since
+  Free-tier Supabase has no automated backups/PITR. Covers what is/isn't
+  already backed up (schema via git, nothing else), a manual data-backup
+  script (`npm run backup` → `scripts/backup-db.sh`, wraps
+  `supabase db dump --data-only -s public,auth`), a checklist of secrets
+  that live outside Postgres entirely, and a disaster recovery runbook.
+  Not yet exercised against a real second project.
 
 ## Things that look unfinished but are intentional
 
-- `zone_rotation.member_order` has no *dedicated* editing UI — the
+- `zone_rotation.member_order` has no _dedicated_ editing UI — the
   original prototype has none either; it's meant to be set once at setup
   time (now via `create_family()` at family creation, or the bootstrap
   template for the original single-household flow).
