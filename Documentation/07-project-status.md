@@ -3,9 +3,10 @@
 This reflects a direct read of the code as of **2026-07-21**, including
 the `accept_family_invite()` wiring, the Web Push subscribe flow, the
 password reset flow, CSV/ICS export, the backups doc, a first Playwright
-suite, and offline support. The project is under active development —
-treat this as a snapshot, not a permanent contract. Cross-check against
-`git log` / `git status` before relying on specifics.
+suite, offline support, and the `config.toml` → production sync fix. The
+project is under active development — treat this as a snapshot, not a
+permanent contract. Cross-check against `git log` / `git status` before
+relying on specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -143,6 +144,22 @@ ones.
   Application → Service Workers, or Network → Offline) before treating
   the caching behavior itself as proven, as distinct from "the worker
   registers and activates," which _is_ covered by that test.
+- **`config.toml` now has a documented, scripted path to the real
+  project.** `supabase db push` only ever applied migrations —
+  `supabase/config.toml` itself (the custom invite/recovery email
+  templates, `site_url`, `additional_redirect_urls`, rate limits, etc.)
+  needed `npx supabase config push`, a separate command, which wasn't in
+  setup docs anywhere. Added to both README.md and
+  [06-setup-guide.md](./06-setup-guide.md), run right after `db push`.
+  Also flagged a second, related trap while in there:
+  `supabase/config.toml`'s `site_url`/`additional_redirect_urls` are
+  hardcoded to the original author's own Vercel URL
+  (`home-scheduler-xi.vercel.app`) as a committed placeholder — anyone
+  standing this app up for their own family needs to change those to
+  their own deployment URL _before_ running `config push`, or their
+  invite/reset emails and OAuth redirects point at someone else's app.
+  Now called out both in a comment above `site_url` in `config.toml`
+  itself and in the setup guide's Deployment section.
 
 ## Things that look unfinished but are intentional
 

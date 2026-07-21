@@ -69,12 +69,23 @@ Access rules enforced in Postgres (not just hidden in the UI):
    npm install
    ```
 
-2. Create a Supabase project, then apply the schema:
+2. Create a Supabase project, then apply the schema and project config:
 
    ```bash
    npx supabase link --project-ref <your-project-ref>
    npx supabase db push
+   npx supabase config push
    ```
+
+   `db push` applies migrations (tables/RLS/functions) only —
+   `config push` is the separate step that syncs `supabase/config.toml`
+   itself, including the custom invite/password-reset email templates
+   (`[auth.email.template.invite]`/`[auth.email.template.recovery]`,
+   pointing at `supabase/templates/*.html`) and the auth `site_url`/
+   `additional_redirect_urls` allow-list. Skipping it means the project
+   keeps Supabase's default hosted email templates and redirect
+   allow-list instead of this repo's — re-run it any time `config.toml`
+   changes.
 
 3. In Supabase Auth settings, enable the **Google** provider using your
    Google OAuth client ID/secret, with redirect URL

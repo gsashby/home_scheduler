@@ -12,7 +12,7 @@ Both `/login` and `/signup` (`src/app/login/page.tsx`,
 `src/app/signup/page.tsx`) offer:
 
 - **Google OAuth** — `supabase.auth.signInWithOAuth({ provider: "google",
-  options: { redirectTo: "<origin>/auth/callback" } })`.
+options: { redirectTo: "<origin>/auth/callback" } })`.
 - **Email + password** — `supabase.auth.signUp()` /
   `signInWithPassword()` directly. Forgotten passwords go through
   `/auth/reset-password` — see "Password reset" below.
@@ -124,7 +124,7 @@ above rather than Supabase's default hosted redirect:
 
 1. `/auth/reset-password` (`src/app/auth/reset-password/page.tsx`) takes
    an email and calls `supabase.auth.resetPasswordForEmail(email, {
-   redirectTo: "<origin>/auth/update-password" })`. The response is
+redirectTo: "<origin>/auth/update-password" })`. The response is
    identical whether or not the email is registered — the UI never
    reveals which, to avoid leaking account existence.
 2. The email uses the custom template
@@ -143,17 +143,16 @@ above rather than Supabase's default hosted redirect:
 
 Like the invite template, `recovery.html`/`config.toml`'s
 `[auth.email.template.recovery]` only take effect against a project once
-applied there (`supabase config push`, or matched by hand in the
-dashboard's Auth → Templates) — `supabase db push` alone doesn't sync
-auth/email config, only migrations. This is the same pre-existing caveat
-as the invite email template, not something new to the reset flow.
+`npx supabase config push` has been run there — `supabase db push` alone
+doesn't sync auth/email config, only migrations. Setup
+([06-setup-guide.md](./06-setup-guide.md)) now includes this step.
 
 ## Manual/legacy bootstrap path
 
 `supabase/bootstrap.sql.example` is a template for hand-provisioning a
 family's `profiles` rows directly in the Supabase SQL editor (service
 role, bypasses RLS) — e.g. to recover a specific family's zone rotation
-order or starter zones. It's explicitly marked superseded for *new*
+order or starter zones. It's explicitly marked superseded for _new_
 households by the self-serve `create_family()` flow above; every account
 already gets a placeholder `profiles` row from `on_auth_user_created`, so
 there's no more manual `auth.users` id lookup needed for a fresh signup.

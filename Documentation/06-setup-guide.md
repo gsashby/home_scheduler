@@ -41,7 +41,20 @@ SITE_URL=<url>`) — so invite emails link back to this app's
 npm install
 npx supabase link --project-ref <your-project-ref>
 npx supabase db push        # applies every migration in order
+npx supabase config push    # syncs supabase/config.toml itself -- see the
+                             # note below on site_url before running this
 ```
+
+`db push` and `config push` are separate and both needed: migrations
+(tables/RLS/functions) vs. everything in `config.toml` (auth settings,
+the custom invite/password-reset email templates in
+`[auth.email.template.*]`, pointing at `supabase/templates/*.html`).
+Skipping `config push` silently leaves the project on Supabase's default
+hosted email templates and redirect allow-list instead of this repo's —
+nothing fails loudly when it's missing, which is exactly why this step
+was absent from setup docs for a while even after the invite and
+password-reset flows started depending on it. Re-run it any time
+`config.toml` changes, not just once at setup.
 
 In **Supabase Auth settings**, enable the **Google** provider with your
 OAuth client id/secret, and set the redirect URL to
@@ -158,6 +171,16 @@ family scale). Set the same environment variables from `.env.local` in
 the Vercel project settings, with `NEXT_PUBLIC_SITE_URL` set to the
 production URL. Add `<production-url>/auth/callback` to the Google OAuth
 client's authorized redirect URIs alongside the localhost one.
+
+Also update `supabase/config.toml`'s `[auth]` `site_url` and
+`additional_redirect_urls` to your real production URL (the committed
+values are the original author's own deployment, meant to be changed —
+see the comment above `site_url` in that file) and re-run
+`npx supabase config push`. `site_url` is what gets baked into the
+invite/password-reset email links (`{{ .SiteURL }}` in
+`supabase/templates/*.html`) and what `additional_redirect_urls` gates
+for OAuth/magic-link/reset `redirectTo` values — get this wrong and
+those emails link back to someone else's app instead of yours.
 
 ## Scripts
 
