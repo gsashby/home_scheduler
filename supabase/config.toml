@@ -156,6 +156,14 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
+#
+# home-scheduler-xi.vercel.app below is the original author's own Vercel
+# deployment, committed here as a placeholder -- if you're standing this
+# app up for your own family on your own Supabase project, change this
+# (and additional_redirect_urls below) to your own deployment URL before
+# running `supabase config push` (see 06-setup-guide.md), or your
+# project's invite/password-reset emails and OAuth redirects will point
+# at someone else's app instead of yours.
 site_url = "https://home-scheduler-xi.vercel.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
@@ -249,6 +257,12 @@ otp_expiry = 3600
 [auth.email.template.invite]
 subject = "You've been invited to Home Scheduler"
 content_path = "./supabase/templates/invite.html"
+
+# Custom password-reset template — same reasoning as the invite template
+# above (see supabase/templates/recovery.html).
+[auth.email.template.recovery]
+subject = "Reset your Home Scheduler password"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

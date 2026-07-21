@@ -37,6 +37,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# database backups (scripts/backup-db.sh) -- contain real family data and
+# credentials (Google OAuth tokens, password hashes); never commit these
+/backups/
+
+# playwright
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

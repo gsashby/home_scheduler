@@ -6,22 +6,22 @@ both the browser and server Supabase clients.
 
 ## Route map
 
-| Route | File | Notes |
-| --- | --- | --- |
-| `/login` | `src/app/login/page.tsx` | Google OAuth or email/password sign-in |
-| `/signup` | `src/app/signup/page.tsx` | Google OAuth or email/password sign-up |
-| `/auth/callback` | `src/app/auth/callback/route.ts` | Exchanges the Google OAuth `code` for a session |
-| `/auth/confirm` | `src/app/auth/confirm/route.ts` | Verifies `token_hash` links from Supabase emails (invites, etc.) |
+| Route                | File                                 | Notes                                                                                  |
+| -------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `/login`             | `src/app/login/page.tsx`             | Google OAuth or email/password sign-in                                                 |
+| `/signup`            | `src/app/signup/page.tsx`            | Google OAuth or email/password sign-up                                                 |
+| `/auth/callback`     | `src/app/auth/callback/route.ts`     | Exchanges the Google OAuth `code` for a session                                        |
+| `/auth/confirm`      | `src/app/auth/confirm/route.ts`      | Verifies `token_hash` links from Supabase emails (invites, etc.)                       |
 | `/onboarding/choose` | `src/app/onboarding/choose/page.tsx` | "Create a family" vs "Join a family" — shown to any signed-in user with no `family_id` |
-| `/onboarding/create` | `src/app/onboarding/create/page.tsx` | Calls `create_family()`, then → `/onboarding/invite` |
-| `/onboarding/join` | `src/app/onboarding/join/page.tsx` | Calls `join_family_by_code()`, then → `/` |
-| `/onboarding/invite` | `src/app/onboarding/invite/page.tsx` | Optional "invite your family" step after creating a family (uses `InviteForm`) |
-| `/` | `src/app/(app)/page.tsx` | **Today** tab |
-| `/calendar` | `src/app/(app)/calendar/page.tsx` | **Calendar** tab |
-| `/tasks` | `src/app/(app)/tasks/page.tsx` | **Tasks** tab |
-| `/zones` | `src/app/(app)/zones/page.tsx` | **Zones** tab (parent-only nav entry) |
-| `/jobs` | `src/app/(app)/jobs/page.tsx` | **Job Board** tab |
-| `/settings` | `src/app/(app)/settings/page.tsx` | **Settings** tab (parent-only nav entry) |
+| `/onboarding/create` | `src/app/onboarding/create/page.tsx` | Calls `create_family()`, then → `/onboarding/invite`                                   |
+| `/onboarding/join`   | `src/app/onboarding/join/page.tsx`   | Calls `join_family_by_code()`, then → `/`                                              |
+| `/onboarding/invite` | `src/app/onboarding/invite/page.tsx` | Optional "invite your family" step after creating a family (uses `InviteForm`)         |
+| `/`                  | `src/app/(app)/page.tsx`             | **Today** tab                                                                          |
+| `/calendar`          | `src/app/(app)/calendar/page.tsx`    | **Calendar** tab                                                                       |
+| `/tasks`             | `src/app/(app)/tasks/page.tsx`       | **Tasks** tab                                                                          |
+| `/zones`             | `src/app/(app)/zones/page.tsx`       | **Zones** tab (parent-only nav entry)                                                  |
+| `/jobs`              | `src/app/(app)/jobs/page.tsx`        | **Job Board** tab                                                                      |
+| `/settings`          | `src/app/(app)/settings/page.tsx`    | **Settings** tab (parent-only nav entry)                                               |
 
 The `(app)` route group shares one layout (`src/app/(app)/layout.tsx`)
 that provides auth + family context to every tab below it.
@@ -51,7 +51,9 @@ family" — it's all provided by context.
 Client-side context wrapping every `(app)` page. Exposes:
 
 ```ts
-{ me, members, family, isParent, isFamilyAdmin, memberById(id) }
+{
+  (me, members, family, isParent, isFamilyAdmin, memberById(id));
+}
 ```
 
 `members` is seeded from the server-fetched list and kept live via a
@@ -95,6 +97,15 @@ Access via the `useFamily()` hook. Throws if called outside the provider
   tasks under; `zone` tasks group under Home, `goal` under Personal).
 - **`notifications.ts`** — `NOTIF_KIND_LABELS` (human labels for each
   `notif_kind`).
+- **`export.ts`** — `toCSV()` / `toICS()` / `downloadFile()`: client-side
+  CSV/ICS export, no server round-trip (the data is already RLS-scoped to
+  the caller's own family — these just format what's in memory and
+  trigger a browser download via a Blob object URL). Used by the "Export
+  .ics" button on Calendar (all events, honoring the member filter chip,
+  across every date — not just the visible view) and "Export CSV" on
+  Tasks and Jobs. ICS events are emitted as floating local time (no
+  timezone), matching the app's single-family-timezone assumption (see
+  [05-notifications-and-push.md](./05-notifications-and-push.md)).
 - **`toast.tsx`** — `ToastProvider` / `useToast()`, mounted once in the
   `(app)` layout.
 - **`family-context.tsx`** — see above.
@@ -129,7 +140,7 @@ down. Pattern used throughout (see `tasks/page.tsx`, `zones/page.tsx`,
    `.rpc(...)` calls, `setState` on the results.
 2. `useEffect(() => { load(); }, [])` on mount.
 3. A Realtime `.channel(...).on("postgres_changes", { event: "*", ... },
-   load)` subscription that just re-runs `load()` wholesale on any
+load)` subscription that just re-runs `load()` wholesale on any
    change to the relevant table(s) — simple, not incremental, but keeps
    client state consistent with RLS-filtered server state without manual
    merge logic.
@@ -147,7 +158,25 @@ down. Pattern used throughout (see `tasks/page.tsx`, `zones/page.tsx`,
   webpack-based PWA plugins cleanly). Handles:
   - App-shell caching: network-first for navigations (falls back to
     cached shell, then `/offline.html`), cache-first for static assets.
+    Cache writes are `await`ed inside the promise passed to
+    `respondWith()` — not fire-and-forget — because a service worker can
+    be killed the instant that promise resolves; an unawaited
+    `cache.put()` is a real race, not a style nit (this exact bug meant
+    visited pages were never reliably cached until it was fixed).
+  - Supabase REST reads (`/rest/v1/*`, cross-origin): network-first with
+    a cache fallback, same reasoning — every `(app)` tab re-fetches its
+    own data on mount (see above), and without this, going offline
+    doesn't just skip a refresh, it makes that re-fetch reject and blank
+    the page's state to `[]`. Cache keys are salted with a hash of the
+    `Authorization` header (not just the URL), since RLS scopes rows by
+    the caller's JWT, not anything in the URL — two different signed-in
+    users hitting the same table+filter would otherwise share one cache
+    entry, which matters on a shared family device.
   - `push` event → `showNotification()` using the payload's
     `title`/`body`/`url` (set by the `send-push` Edge Function).
   - `notificationclick` → focuses an existing tab at that URL or opens a
     new one.
+- `src/components/offline-banner.tsx` (`OfflineBanner`, mounted in
+  `Shell`): a `navigator.onLine` + `online`/`offline` event listener that
+  shows "You're offline — showing the last data that loaded" so users
+  understand why data might be stale and why actions won't save.

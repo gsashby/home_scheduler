@@ -8,6 +8,7 @@ import { Button, Card, Empty, Swatch, Tag } from "@/components/ui";
 import { Field, Modal, Select, TextInput } from "@/components/modal";
 import { InviteForm } from "@/components/invite-form";
 import { GoogleCalendarCard } from "@/components/google-calendar-card";
+import { PushNotificationsCard } from "@/components/push-notifications-card";
 import type { CalendarSharing, Database } from "@/lib/supabase/database.types";
 
 type Subject = Database["public"]["Tables"]["subjects"]["Row"];
@@ -61,6 +62,7 @@ export default function SettingsPage() {
   if (!isParent) {
     return (
       <div>
+        <PushNotificationsCard me={me} />
         <GoogleCalendarCard me={me} />
         <Card>
           <Empty>Other settings are managed by parents.</Empty>
@@ -71,6 +73,7 @@ export default function SettingsPage() {
 
   return (
     <div>
+      <PushNotificationsCard me={me} />
       <GoogleCalendarCard me={me} />
       <Card>
         <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
@@ -321,7 +324,9 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2.5 text-[15px] font-semibold">🔔 Notifications</h2>
+        <h2 className="mb-2.5 text-[15px] font-semibold">
+          ℹ️ About notifications
+        </h2>
         <div className="text-sm leading-7 text-gray-600">
           ① <b>Daily brief</b> — every morning at 7:00 AM (or on-demand from
           Today as a parent)
@@ -332,7 +337,9 @@ export default function SettingsPage() {
         </div>
         <p className="mt-2.5 text-sm text-gray-600">
           Delivered as free web push (works on iPhone for installed web apps) —
-          no App Store or paid developer account needed.
+          no App Store or paid developer account needed. Enable push above to
+          receive these on this device; in-app notifications (the bell) always
+          work regardless.
         </p>
       </Card>
 

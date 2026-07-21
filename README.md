@@ -69,25 +69,42 @@ Access rules enforced in Postgres (not just hidden in the UI):
    npm install
    ```
 
-2. Create a Supabase project, then apply the schema:
+2. Create a Supabase project, then apply the schema and project config:
 
    ```bash
    npx supabase link --project-ref <your-project-ref>
    npx supabase db push
+   npx supabase config push
    ```
+
+   `db push` applies migrations (tables/RLS/functions) only —
+   `config push` is the separate step that syncs `supabase/config.toml`
+   itself, including the custom invite/password-reset email templates
+   (`[auth.email.template.invite]`/`[auth.email.template.recovery]`,
+   pointing at `supabase/templates/*.html`) and the auth `site_url`/
+   `additional_redirect_urls` allow-list. Skipping it means the project
+   keeps Supabase's default hosted email templates and redirect
+   allow-list instead of this repo's — re-run it any time `config.toml`
+   changes.
 
 3. In Supabase Auth settings, enable the **Google** provider using your
    Google OAuth client ID/secret, with redirect URL
    `<your-app-url>/auth/callback`.
 
-4. Generate a Web Push (VAPID) key pair:
+4. Generate a Web Push (VAPID) key pair, deploy the `send-push` Edge
+   Function, and give it the keys as secrets (the Edge Function reads
+   these from its own Supabase secrets, not from `.env.local`):
 
    ```bash
    npx web-push generate-vapid-keys
+   npx supabase functions deploy send-push
+   npx supabase secrets set VAPID_PUBLIC_KEY=<the-public-key> VAPID_PRIVATE_KEY=<the-private-key>
    ```
 
 5. Copy `.env.example` to `.env.local` and fill in the values from steps
-   2–4:
+   2–4, including `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — the same public key as
+   above, just also given to the browser so it can call
+   `pushManager.subscribe()` (VAPID public keys aren't secret):
 
    ```bash
    cp .env.example .env.local
@@ -210,8 +227,15 @@ Following the phased build order from the handoff spec:
       Cloud Console + secrets setup in step 7 above; not yet exercised
       against a real Google account (no live Supabase project in this
       environment — see "What done means so far" below).
-- [ ] **Phase 6** — Offline support, CSV/ICS export, backups doc, Playwright
-      tests
+- [x] **Phase 6** — CSV/ICS export, the backups doc, a first Playwright
+      suite (`npm run test:e2e` — public pages + auth guards;
+      authenticated-flow coverage is a documented gap, see
+      `tests/e2e/authenticated/README.md`), and offline support
+      (Supabase REST read caching + an offline banner, beyond the Phase 2
+      app-shell cache) are all done — see
+      `Documentation/07-project-status.md` for current detail, including
+      a caveat on how the offline caching itself was (and wasn't)
+      verified.
 
 **What "done" means so far**: the schema was validated by applying it to a
 real local Postgres instance and exercising every RPC function directly

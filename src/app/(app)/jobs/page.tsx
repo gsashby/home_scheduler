@@ -6,6 +6,7 @@ import { useFamily } from "@/lib/family-context";
 import { useToast } from "@/lib/toast";
 import { Button, Card, Empty } from "@/components/ui";
 import { Field, Modal, TextInput } from "@/components/modal";
+import { downloadFile, toCSV } from "@/lib/export";
 import type { Database, JobStatus } from "@/lib/supabase/database.types";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"];
@@ -62,6 +63,21 @@ export default function JobsPage() {
 
   if (loading) return null;
 
+  function exportCSV() {
+    const csv = toCSV(jobs, [
+      { header: "Title", value: (j) => j.title },
+      { header: "Amount", value: (j) => j.amount },
+      { header: "Status", value: (j) => STATUS_LABELS[j.status] },
+      {
+        header: "Taken by",
+        value: (j) =>
+          j.taken_by ? (memberById(j.taken_by)?.display_name ?? "") : "",
+      },
+      { header: "Created", value: (j) => j.created_at },
+    ]);
+    downloadFile("jobs.csv", csv, "text/csv;charset=utf-8");
+  }
+
   return (
     <Card>
       <h2 className="mb-2.5 flex flex-wrap items-center gap-2 text-[15px] font-semibold">
@@ -70,13 +86,16 @@ export default function JobsPage() {
           paid jobs anyone can take to earn money
         </span>
       </h2>
-      {isParent && (
-        <div className="mb-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {isParent && (
           <Button size="sm" onClick={() => setModalOpen(true)}>
             + Post a job
           </Button>
-        </div>
-      )}
+        )}
+        <Button size="sm" variant="secondary" onClick={exportCSV}>
+          Export CSV
+        </Button>
+      </div>
 
       {jobs.length === 0 ? (
         <Empty>No jobs posted.</Empty>

@@ -1,7 +1,7 @@
 # Setup Guide
 
 For a condensed version of this, see the top-level [`README.md`](../README.md).
-This doc adds detail on *why* each step exists.
+This doc adds detail on _why_ each step exists.
 
 ## Prerequisites
 
@@ -14,12 +14,13 @@ This doc adds detail on *why* each step exists.
 
 ## Environment variables (`.env.local`, copy from `.env.example`)
 
-| Variable | Used by | Notes |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Browser + server Supabase clients | Public — the project's REST/Auth endpoint |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server Supabase clients | Public — RLS still governs what it can do |
-| `VAPID_PUBLIC_KEY` | `send-push` Edge Function | From `npx web-push generate-vapid-keys` |
-| `VAPID_PRIVATE_KEY` | `send-push` Edge Function | Same command — **secret**, never expose to the client |
+| Variable                        | Used by                                 | Notes                                                                                                                                                                                 |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Browser + server Supabase clients       | Public — the project's REST/Auth endpoint                                                                                                                                             |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server Supabase clients       | Public — RLS still governs what it can do                                                                                                                                             |
+| `VAPID_PUBLIC_KEY`              | `send-push` Edge Function               | From `npx web-push generate-vapid-keys`. Listed here for reference — the Edge Function actually reads it from its own Supabase secret (`supabase secrets set`), not from `.env.local` |
+| `VAPID_PRIVATE_KEY`             | `send-push` Edge Function               | Same command — **secret**, never expose to the client. Same caveat: set via `supabase secrets set`, not read from `.env.local`                                                        |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`  | Browser (`push-notifications-card.tsx`) | Same value as `VAPID_PUBLIC_KEY` above, exposed to the client so `pushManager.subscribe()` can use it — VAPID public keys aren't secret                                               |
 
 Two more secrets live outside `.env.local`, set directly against the
 Supabase project (not via Next.js env vars):
@@ -31,7 +32,7 @@ Supabase project (not via Next.js env vars):
   Vault entry with a `REPLACE_ME` placeholder; set the real value once
   via `vault.update_secret()` in the SQL editor.
 - **`SITE_URL`** (Edge Function secret, `npx supabase secrets set
-  SITE_URL=<url>`) — so invite emails link back to this app's
+SITE_URL=<url>`) — so invite emails link back to this app's
   `/auth/confirm` instead of Supabase's default confirmation page.
 
 ## First-time project setup
@@ -40,7 +41,20 @@ Supabase project (not via Next.js env vars):
 npm install
 npx supabase link --project-ref <your-project-ref>
 npx supabase db push        # applies every migration in order
+npx supabase config push    # syncs supabase/config.toml itself -- see the
+                             # note below on site_url before running this
 ```
+
+`db push` and `config push` are separate and both needed: migrations
+(tables/RLS/functions) vs. everything in `config.toml` (auth settings,
+the custom invite/password-reset email templates in
+`[auth.email.template.*]`, pointing at `supabase/templates/*.html`).
+Skipping `config push` silently leaves the project on Supabase's default
+hosted email templates and redirect allow-list instead of this repo's —
+nothing fails loudly when it's missing, which is exactly why this step
+was absent from setup docs for a while even after the invite and
+password-reset flows started depending on it. Re-run it any time
+`config.toml` changes, not just once at setup.
 
 In **Supabase Auth settings**, enable the **Google** provider with your
 OAuth client id/secret, and set the redirect URL to
@@ -48,13 +62,15 @@ OAuth client id/secret, and set the redirect URL to
 
 ```bash
 npx web-push generate-vapid-keys   # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
-cp .env.example .env.local         # fill in the values above
+cp .env.example .env.local         # fill in the values above, including
+                                    # NEXT_PUBLIC_VAPID_PUBLIC_KEY = the same public key
 ```
 
 Deploy the two Edge Functions and set their secrets:
 
 ```bash
 npx supabase functions deploy send-push
+npx supabase secrets set VAPID_PUBLIC_KEY=<the-public-key> VAPID_PRIVATE_KEY=<the-private-key>
 npx supabase functions deploy send-invite
 npx supabase secrets set SITE_URL=<your-app-url>
 ```
@@ -74,6 +90,18 @@ Run the app:
 ```bash
 npm run dev
 ```
+
+Access it via `http://localhost:3000`, not `http://127.0.0.1:3000` —
+Next.js 16's dev-mode `allowedDevOrigins` check silently rejects requests
+from origins it doesn't recognize as "the same machine," and `127.0.0.1`
+apparently doesn't count as equivalent to `localhost` out of the box. The
+visible symptom is narrow ("Blocked cross-origin request to Next.js dev
+resource" in the server log) but the actual effect is much bigger: client
+hydration fails entirely and silently — the page still renders (SSR HTML
+is unaffected), but no `onClick`/`onSubmit`/`useEffect` ever runs, so
+nothing on the page actually works. Found while getting
+`tests/e2e/` running in this repo — see `playwright.config.ts`, which
+uses `localhost` for exactly this reason.
 
 ## First-time family setup
 
@@ -144,14 +172,26 @@ the Vercel project settings, with `NEXT_PUBLIC_SITE_URL` set to the
 production URL. Add `<production-url>/auth/callback` to the Google OAuth
 client's authorized redirect URIs alongside the localhost one.
 
+Also update `supabase/config.toml`'s `[auth]` `site_url` and
+`additional_redirect_urls` to your real production URL (the committed
+values are the original author's own deployment, meant to be changed —
+see the comment above `site_url` in that file) and re-run
+`npx supabase config push`. `site_url` is what gets baked into the
+invite/password-reset email links (`{{ .SiteURL }}` in
+`supabase/templates/*.html`) and what `additional_redirect_urls` gates
+for OAuth/magic-link/reset `redirectTo` values — get this wrong and
+those emails link back to someone else's app instead of yours.
+
 ## Scripts
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run start` | Run the production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run format` | Prettier, writes changes |
-| `npm run format:check` | Prettier, check only (CI) |
+| Command                | Purpose                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`          | Start the dev server                                                                                                                                    |
+| `npm run build`        | Production build                                                                                                                                        |
+| `npm run start`        | Run the production build                                                                                                                                |
+| `npm run lint`         | ESLint                                                                                                                                                  |
+| `npm run typecheck`    | `tsc --noEmit`                                                                                                                                          |
+| `npm run format`       | Prettier, writes changes                                                                                                                                |
+| `npm run format:check` | Prettier, check only (CI)                                                                                                                               |
+| `npm run backup`       | Dumps family data + accounts from the linked Supabase project (`scripts/backup-db.sh`) — see [08-backups-and-recovery.md](./08-backups-and-recovery.md) |
+| `npm run test:e2e`     | Playwright — public pages + auth-guard redirects only; see `tests/e2e/authenticated/README.md` for what's deliberately not covered yet                  |

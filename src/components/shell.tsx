@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFamily } from "@/lib/family-context";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { OfflineBanner } from "@/components/offline-banner";
 import { Swatch } from "@/components/ui";
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
+      <OfflineBanner />
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-gray-50/90 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-2.5">
           <span className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight">

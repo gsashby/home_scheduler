@@ -16,6 +16,7 @@ import {
 } from "@/lib/date";
 import { Button, Card, Chip, Empty, Tag } from "@/components/ui";
 import { Field, Modal, Select, TextArea, TextInput } from "@/components/modal";
+import { downloadFile, toICS } from "@/lib/export";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Event = Database["public"]["Tables"]["calendar_events"]["Row"];
@@ -24,7 +25,7 @@ type CalView = "day" | "3day" | "week";
 type AttendeesByEvent = Record<string, string[]>;
 
 export default function CalendarPage() {
-  const { me, isParent, members, memberById } = useFamily();
+  const { me, isParent, members, memberById, family } = useFamily();
   const toast = useToast();
   const [view, setView] = useState<CalView>("week");
   const [anchor, setAnchor] = useState(todayISO());
@@ -93,6 +94,48 @@ export default function CalendarPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days.join(",")]);
+
+  // Exports every event regardless of the visible date range/view (a
+  // backup/import use case, not a "print this week" one) — restricted to
+  // the currently selected member filter if one is active, matching what
+  // filter already narrows on-screen.
+  async function exportICS() {
+    const supabase = createClient();
+    let query = supabase
+      .from("calendar_events")
+      .select("*")
+      .order("date")
+      .order("start_time");
+    if (filter) query = query.eq("member_id", filter);
+    const { data, error } = await query;
+    if (error || !data) {
+      toast("Couldn't export calendar");
+      return;
+    }
+    const calendarName = filter
+      ? `${family.name} — ${memberById(filter)?.display_name}`
+      : `${family.name} — Home Scheduler`;
+    const ics = toICS(
+      calendarName,
+      data.map((e) => ({
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        startTime: e.start_time,
+        endTime: e.end_time,
+        allDay: e.all_day,
+        location: e.location,
+        notes: e.notes,
+        organizer: memberById(e.member_id)?.display_name ?? null,
+      })),
+    );
+    downloadFile(
+      `${family.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-calendar.ics`,
+      ics,
+      "text/calendar;charset=utf-8",
+    );
+    toast(`Exported ${data.length} event${data.length === 1 ? "" : "s"}`);
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -191,6 +234,9 @@ export default function CalendarPage() {
           ›
         </Button>
         <div className="flex-1" />
+        <Button size="sm" variant="secondary" onClick={exportICS}>
+          Export .ics
+        </Button>
         <Button
           size="sm"
           onClick={() => openNewEvent(view === "day" ? days[0] : todayISO())}

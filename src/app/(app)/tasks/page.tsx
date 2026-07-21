@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/family-context";
 import { useToast } from "@/lib/toast";
-import { relDay, todayISO } from "@/lib/date";
+import { fmtTime, relDay, todayISO } from "@/lib/date";
 import { categoryLabel, TOP_CATEGORIES } from "@/lib/categories";
 import {
   Button,
@@ -16,6 +16,7 @@ import {
   Tag,
 } from "@/components/ui";
 import { Field, Modal, Select, TextArea, TextInput } from "@/components/modal";
+import { downloadFile, toCSV } from "@/lib/export";
 import type { Database, TaskCategory } from "@/lib/supabase/database.types";
 
 type Task = Database["public"]["Tables"]["tasks"]["Row"] & {
@@ -91,6 +92,29 @@ export default function TasksPage() {
     (t) => t.date < todayISO() && t.status === "assigned",
   ).length;
 
+  function exportCSV() {
+    const csv = toCSV(visible, [
+      { header: "Title", value: (t) => t.title },
+      {
+        header: "Assigned to",
+        value: (t) => memberById(t.member_id)?.display_name ?? "",
+      },
+      {
+        header: "Category",
+        value: (t) =>
+          categoryLabel(
+            t.category,
+            subjects.find((s) => s.id === t.subject_id)?.name ?? null,
+          ),
+      },
+      { header: "Date", value: (t) => t.date },
+      { header: "Deadline", value: (t) => fmtTime(t.deadline) },
+      { header: "Status", value: (t) => t.status },
+      { header: "Created", value: (t) => t.created_at },
+    ]);
+    downloadFile("tasks.csv", csv, "text/csv;charset=utf-8");
+  }
+
   return (
     <div>
       <Card>
@@ -105,6 +129,9 @@ export default function TasksPage() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Button size="sm" onClick={() => setModalOpen(true)}>
             + {isParent ? "Assign task" : "Add my own item"}
+          </Button>
+          <Button size="sm" variant="secondary" onClick={exportCSV}>
+            Export CSV
           </Button>
           {isParent && overdueCount > 0 && (
             <Button

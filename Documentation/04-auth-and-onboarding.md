@@ -12,10 +12,10 @@ Both `/login` and `/signup` (`src/app/login/page.tsx`,
 `src/app/signup/page.tsx`) offer:
 
 - **Google OAuth** — `supabase.auth.signInWithOAuth({ provider: "google",
-  options: { redirectTo: "<origin>/auth/callback" } })`.
+options: { redirectTo: "<origin>/auth/callback" } })`.
 - **Email + password** — `supabase.auth.signUp()` /
-  `signInWithPassword()` directly. Password reset is not implemented yet
-  (`/login` says so explicitly: "contact your family admin").
+  `signInWithPassword()` directly. Forgotten passwords go through
+  `/auth/reset-password` — see "Password reset" below.
 
 ## What happens on signup
 
@@ -95,30 +95,64 @@ the optional `/onboarding/invite` step right after creating a family.
    at this point they have an `auth.users` row and (via the same
    `on_auth_user_created` trigger as any signup) a `profiles` row with
    `family_id = null`.
-5. From here they're in the normal "no family yet" state, so the `(app)`
-   layout would send them to `/onboarding/choose` — **however**, the
-   intent of an email invite is for `accept_family_invite()` to run
-   automatically and skip that step, matching them to their pending
-   invite by email and joining them directly. Verify this wiring is
-   actually connected before relying on it — see
-   [07-project-status.md](./07-project-status.md) for the current status
-   of that specific piece.
-6. `accept_family_invite()` (when/where called): matches
-   `auth.users.email` (lowercased) against the newest `pending` invite
-   for that email, updates the caller's `display_name`/`color` from the
-   invite, joins the family via the shared `_join_family()` helper using
-   the invite's `role`, and marks the invite `accepted`.
+5. From here they're in the normal "no family yet" state
+   (`profiles.family_id is null`). The `(app)` layout
+   (`src/app/(app)/layout.tsx`) handles this: before falling through to
+   `/onboarding/choose`, it calls `accept_family_invite()`. If that
+   invitee has a pending invite matching their email, it joins them
+   directly and the layout continues rendering the app with their new
+   family — `/onboarding/choose` is only reached for accounts with no
+   matching invite (i.e. an organic signup).
+6. `accept_family_invite()`: matches `auth.users.email` (lowercased)
+   against the newest `pending` invite for that email, updates the
+   caller's `display_name`/`color` from the invite, joins the family via
+   the shared `_join_family()` helper using the invite's `role`, and
+   marks the invite `accepted`. Raises (so the RPC call returns
+   `data: null`) when there's no pending invite for the account's email —
+   the `(app)` layout treats that as the normal "no invite, go pick a
+   family" case rather than an error.
 
 Invites can be revoked while still `pending` via
 `cancel_family_invite()` (soft-delete — `status = 'revoked'`, keeps an
 audit trail and frees the email for re-invite).
+
+## Password reset
+
+`/login` links to `/auth/reset-password` ("Forgot your password?"),
+following the same server-verified `token_hash` pattern as the invite flow
+above rather than Supabase's default hosted redirect:
+
+1. `/auth/reset-password` (`src/app/auth/reset-password/page.tsx`) takes
+   an email and calls `supabase.auth.resetPasswordForEmail(email, {
+redirectTo: "<origin>/auth/update-password" })`. The response is
+   identical whether or not the email is registered — the UI never
+   reveals which, to avoid leaking account existence.
+2. The email uses the custom template
+   `supabase/templates/recovery.html` (wired in via
+   `supabase/config.toml`'s `[auth.email.template.recovery]`, same
+   mechanism as `[auth.email.template.invite]`), linking to
+   `/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/update-password`.
+3. `/auth/confirm/route.ts` — already generic over `type` — calls
+   `supabase.auth.verifyOtp({ type: "recovery", token_hash })`, which
+   establishes a (recovery) session, then redirects to `next`.
+4. `/auth/update-password` (`src/app/auth/update-password/page.tsx`)
+   checks for that session (`supabase.auth.getUser()`); if present, shows
+   a new-password form and calls `supabase.auth.updateUser({ password })`
+   on submit. No session (expired/already-used link, or a direct visit)
+   shows an error with a link back to request a new one.
+
+Like the invite template, `recovery.html`/`config.toml`'s
+`[auth.email.template.recovery]` only take effect against a project once
+`npx supabase config push` has been run there — `supabase db push` alone
+doesn't sync auth/email config, only migrations. Setup
+([06-setup-guide.md](./06-setup-guide.md)) now includes this step.
 
 ## Manual/legacy bootstrap path
 
 `supabase/bootstrap.sql.example` is a template for hand-provisioning a
 family's `profiles` rows directly in the Supabase SQL editor (service
 role, bypasses RLS) — e.g. to recover a specific family's zone rotation
-order or starter zones. It's explicitly marked superseded for *new*
+order or starter zones. It's explicitly marked superseded for _new_
 households by the self-serve `create_family()` flow above; every account
 already gets a placeholder `profiles` row from `on_auth_user_created`, so
 there's no more manual `auth.users` id lookup needed for a fresh signup.

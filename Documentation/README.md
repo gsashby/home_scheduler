@@ -12,15 +12,16 @@ subject to change.
 
 ## Contents
 
-| Doc | Covers |
-| --- | --- |
-| [01-architecture.md](./01-architecture.md) | Stack, core design principles, request flow, multi-tenancy model |
-| [02-database-schema.md](./02-database-schema.md) | Every table, enum, RLS policy, and RPC function, grouped by feature |
-| [03-frontend.md](./03-frontend.md) | Route map, layout/auth guard, contexts, shared UI components, realtime patterns |
-| [04-auth-and-onboarding.md](./04-auth-and-onboarding.md) | Sign up/login, the family create-or-join flow, email invites |
-| [05-notifications-and-push.md](./05-notifications-and-push.md) | Notification kinds, cron jobs, Web Push delivery, Edge Functions |
-| [06-setup-guide.md](./06-setup-guide.md) | Environment variables, local dev, Supabase project setup, deployment |
-| [07-project-status.md](./07-project-status.md) | What's built, what's in progress, known gaps |
+| Doc                                                            | Covers                                                                                              |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [01-architecture.md](./01-architecture.md)                     | Stack, core design principles, request flow, multi-tenancy model                                    |
+| [02-database-schema.md](./02-database-schema.md)               | Every table, enum, RLS policy, and RPC function, grouped by feature                                 |
+| [03-frontend.md](./03-frontend.md)                             | Route map, layout/auth guard, contexts, shared UI components, realtime patterns                     |
+| [04-auth-and-onboarding.md](./04-auth-and-onboarding.md)       | Sign up/login, the family create-or-join flow, email invites                                        |
+| [05-notifications-and-push.md](./05-notifications-and-push.md) | Notification kinds, cron jobs, Web Push delivery, Edge Functions                                    |
+| [06-setup-guide.md](./06-setup-guide.md)                       | Environment variables, local dev, Supabase project setup, deployment                                |
+| [07-project-status.md](./07-project-status.md)                 | What's built, what's in progress, known gaps                                                        |
+| [08-backups-and-recovery.md](./08-backups-and-recovery.md)     | What's/isn't backed up, the manual data-backup script, secrets checklist, disaster recovery runbook |
 
 ## Quick orientation
 

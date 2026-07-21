@@ -83,7 +83,7 @@ export default function LoginPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 focus:outline-none"
           />
           <input
             type="password"
@@ -91,7 +91,7 @@ export default function LoginPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 focus:outline-none"
           />
           <button
             type="submit"
@@ -108,9 +108,13 @@ export default function LoginPage() {
             Create an account
           </Link>
         </p>
-        <p className="text-xs text-gray-400">
-          Forgot your password? Password reset isn&rsquo;t available yet —
-          contact your family admin.
+        <p className="text-xs text-gray-500">
+          <Link
+            href="/auth/reset-password"
+            className="font-semibold text-indigo-600"
+          >
+            Forgot your password?
+          </Link>
         </p>
       </div>
     </main>

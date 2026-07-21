@@ -30,16 +30,27 @@ export default async function AppLayout({
     redirect("/auth/error?reason=missing_profile");
   }
 
-  if (!me.family_id) {
-    redirect("/onboarding/choose");
+  let familyId = me.family_id;
+  if (!familyId) {
+    // A pending email invite (Settings → Invite a family member, or the
+    // post-create-family step) should auto-join the invitee instead of
+    // sending them through the generic create-or-join onboarding flow.
+    // accept_family_invite() raises (data null, error set) when there's
+    // no pending invite for this account's email — that's the normal
+    // case for an organic signup, so fall through to onboarding.
+    const { data: joinedProfile } = await supabase.rpc("accept_family_invite");
+    if (!joinedProfile?.family_id) {
+      redirect("/onboarding/choose");
+    }
+    familyId = joinedProfile.family_id;
   }
 
   const [{ data: family }, { data: members }] = await Promise.all([
-    supabase.from("families").select("*").eq("id", me.family_id).single(),
+    supabase.from("families").select("*").eq("id", familyId).single(),
     supabase
       .from("profiles")
       .select("*")
-      .eq("family_id", me.family_id)
+      .eq("family_id", familyId)
       .order("created_at"),
   ]);
 
