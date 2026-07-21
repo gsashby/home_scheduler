@@ -41,6 +41,11 @@ yarn-error.log*
 # credentials (Google OAuth tokens, password hashes); never commit these
 /backups/
 
+# playwright
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

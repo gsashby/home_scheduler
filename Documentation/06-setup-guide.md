@@ -78,6 +78,18 @@ Run the app:
 npm run dev
 ```
 
+Access it via `http://localhost:3000`, not `http://127.0.0.1:3000` —
+Next.js 16's dev-mode `allowedDevOrigins` check silently rejects requests
+from origins it doesn't recognize as "the same machine," and `127.0.0.1`
+apparently doesn't count as equivalent to `localhost` out of the box. The
+visible symptom is narrow ("Blocked cross-origin request to Next.js dev
+resource" in the server log) but the actual effect is much bigger: client
+hydration fails entirely and silently — the page still renders (SSR HTML
+is unaffected), but no `onClick`/`onSubmit`/`useEffect` ever runs, so
+nothing on the page actually works. Found while getting
+`tests/e2e/` running in this repo — see `playwright.config.ts`, which
+uses `localhost` for exactly this reason.
+
 ## First-time family setup
 
 Two options, since the multi-tenant self-serve flow now covers what used
@@ -159,3 +171,4 @@ client's authorized redirect URIs alongside the localhost one.
 | `npm run format`       | Prettier, writes changes                                                                                                                                |
 | `npm run format:check` | Prettier, check only (CI)                                                                                                                               |
 | `npm run backup`       | Dumps family data + accounts from the linked Supabase project (`scripts/backup-db.sh`) — see [08-backups-and-recovery.md](./08-backups-and-recovery.md) |
+| `npm run test:e2e`     | Playwright — public pages + auth-guard redirects only; see `tests/e2e/authenticated/README.md` for what's deliberately not covered yet                  |

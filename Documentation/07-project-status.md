@@ -2,10 +2,10 @@
 
 This reflects a direct read of the code as of **2026-07-21**, including
 the `accept_family_invite()` wiring, the Web Push subscribe flow, the
-password reset flow, CSV/ICS export, and the backups doc. The project is
-under active development — treat this as a snapshot, not a permanent
-contract. Cross-check against `git log` / `git status` before relying on
-specifics.
+password reset flow, CSV/ICS export, the backups doc, and a first
+Playwright suite. The project is under active development — treat this
+as a snapshot, not a permanent contract. Cross-check against `git log` /
+`git status` before relying on specifics.
 
 ## Build phases (per the original handoff spec, see top-level README)
 
@@ -22,10 +22,10 @@ specifics.
       Settings) drives a real OAuth connect → pick calendar → enable sync
       flow against `set_member_settings()`. Substantially complete, not a
       stub.
-- [ ] **Phase 6** — partially done. CSV/ICS export and the backups doc
-      now shipped (see below); offline support is still only what Phase 2
-      shipped (service worker caches the app shell, nothing more); no
-      Playwright config/tests.
+- [ ] **Phase 6** — partially done. CSV/ICS export, the backups doc, and
+      a first Playwright suite are now shipped (see below); offline
+      support is still only what Phase 2 shipped (service worker caches
+      the app shell, nothing more).
 
 ## Multi-tenant rework (in progress, on top of Phase 1–4)
 
@@ -44,11 +44,13 @@ invite auto-join (see "Resolved" below).
 
 ## Known gaps, verified by reading the code
 
-Only what's left of Phase 6 (above): offline support beyond the app-shell
-cache, and Playwright tests. Every other previously tracked gap
-(`/auth/error`, `accept_family_invite()` wiring, the Web Push subscribe
-flow, password reset, CSV/ICS export, backups doc) has been resolved; see
-below.
+Only what's left of Phase 6 (above): offline support beyond the
+app-shell cache, and authenticated-flow E2E coverage (sign-in, task/job/
+calendar CRUD, invites) — see `tests/e2e/authenticated/README.md` for
+that specific boundary. Every other previously tracked gap (`/auth/error`,
+`accept_family_invite()` wiring, the Web Push subscribe flow, password
+reset, CSV/ICS export, backups doc, a first Playwright suite) has been
+resolved; see below.
 
 ## Resolved since the previous snapshot (2026-07-20)
 
@@ -104,6 +106,19 @@ below.
   `supabase db dump --data-only -s public,auth`), a checklist of secrets
   that live outside Postgres entirely, and a disaster recovery runbook.
   Not yet exercised against a real second project.
+- **A first Playwright E2E suite now exists** (`npm run test:e2e`,
+  16 tests, all passing as of this writing): public-page rendering
+  (`/login`, `/signup`, `/auth/reset-password`, `/auth/update-password`)
+  and every protected route's auth-guard redirect to `/login`. Runs
+  against a syntactically-valid but unreachable Supabase URL — no
+  Docker/real project needed for this tier. Authenticated-flow coverage
+  (sign-in, task/job/calendar CRUD, invites) is a deliberate, documented
+  gap — see `tests/e2e/authenticated/README.md` — since writing untested
+  specs against a backend this environment can't run would be worse than
+  not having them. Along the way, found and documented a real Next.js 16
+  dev-mode gotcha: accessing the dev server via `127.0.0.1` instead of
+  `localhost` silently breaks client hydration entirely (see
+  [06-setup-guide.md](./06-setup-guide.md)).
 
 ## Things that look unfinished but are intentional
 
