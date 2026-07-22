@@ -227,9 +227,11 @@ Following the phased build order from the handoff spec:
       Cloud Console + secrets setup in step 7 above; not yet exercised
       against a real Google account (no live Supabase project in this
       environment — see "What done means so far" below).
-- [x] **Phase 6** — CSV/ICS export, the backups doc, a first Playwright
-      suite (`npm run test:e2e` — public pages + auth guards;
-      authenticated-flow coverage is a documented gap, see
+- [x] **Phase 6** — CSV/ICS export, the backups doc, a Playwright suite
+      (`npm run test:e2e` — public pages + auth guards, plus a gated
+      authenticated-flow tier that runs only when
+      `SUPABASE_SERVICE_ROLE_KEY` is set; authored and type-checked but not
+      yet executed against a real backend here — see
       `tests/e2e/authenticated/README.md`), and offline support
       (Supabase REST read caching + an offline banner, beyond the Phase 2
       app-shell cache) are all done — see
