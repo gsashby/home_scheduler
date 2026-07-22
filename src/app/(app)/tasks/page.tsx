@@ -340,7 +340,9 @@ function TaskCard({
                     checked={s.done}
                     disabled={!(mine || isParent)}
                     onChange={() =>
-                      call("toggle_subtask", { p_subtask_id: s.id })
+                      call("toggle_subtask", { p_subtask_id: s.id }).then(
+                        reload,
+                      )
                     }
                     className="h-4 w-4 accent-green-600"
                   />
