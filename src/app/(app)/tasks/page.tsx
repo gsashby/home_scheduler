@@ -498,6 +498,12 @@ function TaskModal({
         setDate(editingTask.date);
         setDeadline(editingTask.deadline?.slice(0, 5) ?? "");
         setRemind(String(editingTask.remind_minutes));
+        setSubtasksText(
+          [...editingTask.subtasks]
+            .sort((a, b) => a.position - b.position)
+            .map((s) => s.title)
+            .join("\n"),
+        );
       } else {
         setTitle("");
         setOwnerId(me.id);
@@ -518,6 +524,10 @@ function TaskModal({
     const category: TaskCategory =
       kind === "school" ? "school" : (value as TaskCategory);
     const subjectId = kind === "school" ? value : null;
+    const subtasks = subtasksText
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     if (editingTask) {
       const { error } = await createClient().rpc("update_task", {
@@ -529,6 +539,7 @@ function TaskModal({
         p_date: date,
         p_deadline: deadline || null,
         p_remind_minutes: Number(remind),
+        p_subtasks: subtasks,
       });
       setSaving(false);
       if (error) return;
@@ -539,11 +550,6 @@ function TaskModal({
       );
       return;
     }
-
-    const subtasks = subtasksText
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
 
     const { error } = await createClient().rpc("create_task", {
       p_title: title.trim(),
@@ -640,16 +646,14 @@ function TaskModal({
           <option value="120">2 hours</option>
         </Select>
       </Field>
-      {!editingTask && (
-        <Field label="Subtasks (one per line, optional)">
-          <TextArea
-            rows={3}
-            value={subtasksText}
-            onChange={(e) => setSubtasksText(e.target.value)}
-            placeholder={"Do 5.1\nDo 5.2"}
-          />
-        </Field>
-      )}
+      <Field label="Subtasks (one per line, optional)">
+        <TextArea
+          rows={3}
+          value={subtasksText}
+          onChange={(e) => setSubtasksText(e.target.value)}
+          placeholder={"Do 5.1\nDo 5.2"}
+        />
+      </Field>
       <div className="mt-1.5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
           Cancel

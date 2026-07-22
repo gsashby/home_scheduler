@@ -514,6 +514,7 @@ export type Database = {
           p_date: string;
           p_deadline: string | null;
           p_remind_minutes: number | null;
+          p_subtasks: string[] | null;
         };
         Returns: void;
       };
