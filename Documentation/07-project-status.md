@@ -1,9 +1,10 @@
 # Project Status
 
-This reflects a direct read of the code as of **2026-07-21**, including
+This reflects a direct read of the code as of **2026-07-22**, including
 the `accept_family_invite()` wiring, the Web Push subscribe flow, the
 password reset flow, CSV/ICS export, the backups doc, a first Playwright
-suite, offline support, and the `config.toml` → production sync fix. The
+suite, the gated authenticated-flow E2E specs, offline support, and the
+`config.toml` → production sync fix. The
 project is under active development — treat this as a snapshot, not a
 permanent contract. Cross-check against `git log` / `git status` before
 relying on specifics.
@@ -44,16 +45,33 @@ invite auto-join (see "Resolved" below).
 
 ## Known gaps, verified by reading the code
 
-Every phase-list item is now done. What remains: authenticated-flow E2E
-coverage (sign-in, task/job/calendar CRUD, invites) — see
-`tests/e2e/authenticated/README.md` — and the actual runtime behavior of
-the offline caching in `public/sw.js`, which is code-reviewed and
-reasoned about but not exercised through an automated test (see the note
-under "Offline support" below). Both are documented gaps, not silent
-ones.
+Every phase-list item is now done. The authenticated-flow E2E specs
+(sign-in, task/job/calendar CRUD across a parent and a kid session) now
+**exist**, gated behind `SUPABASE_SERVICE_ROLE_KEY` — see "Authenticated
+E2E specs" under "Resolved" below and `tests/e2e/authenticated/README.md`.
+They are authored and type-checked but not yet _executed_ here (no Docker
+for `supabase start`, no linked project), so running them against a real
+backend is the remaining step to treat those flows as proven. The other
+standing gap is the actual runtime behavior of the offline caching in
+`public/sw.js`, which is code-reviewed and reasoned about but not
+exercised through an automated test (see the note under "Offline support"
+below). Both are documented gaps, not silent ones.
 
 ## Resolved since the previous snapshot (2026-07-20)
 
+- **Authenticated E2E specs now exist (gated).** `tests/e2e/authenticated/`
+  holds a setup project (`auth.setup.ts`, which sets passwords on the
+  seeded Mom/Sara accounts via the service-role admin API and saves their
+  signed-in `storageState`) plus four spec files: role-scoped landing
+  (`smoke`), the assign→done→verify task lifecycle across a parent and a
+  kid session (`tasks`), calendar add/edit/delete (`calendar`), and the
+  post→take→finish→pay job lifecycle (`jobs`). `playwright.config.ts` only
+  wires this tier in when `SUPABASE_SERVICE_ROLE_KEY` (plus the real
+  URL/anon key) is set, so `npm run test:e2e` with none set behaves
+  exactly as before (17 public/auth-guard tests, no Docker). Authored and
+  type-checked; **not yet run against a real backend in this environment**
+  (no Docker) — see `tests/e2e/authenticated/README.md` for how to run
+  them and what's verified so far.
 - **`/auth/error` route now exists** (`src/app/auth/error/page.tsx`),
   handling `oauth` / `otp` / `missing_profile` failure reasons with a
   friendly message and a link back to `/login`.
