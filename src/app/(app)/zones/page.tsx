@@ -15,7 +15,7 @@ type Rotation = Database["public"]["Tables"]["zone_rotation"]["Row"];
 type Task = Database["public"]["Tables"]["tasks"]["Row"];
 
 export default function ZonesPage() {
-  const { isParent, memberById } = useFamily();
+  const { isParent, members, memberById } = useFamily();
   const toast = useToast();
   const [zones, setZones] = useState<ZoneWithAssignee[]>([]);
   const [rotation, setRotation] = useState<Rotation | null>(null);
@@ -110,6 +110,13 @@ export default function ZonesPage() {
       {zones.map((z) => {
         const assignee = z.assignee_id ? memberById(z.assignee_id) : undefined;
         const zt = cycleTasks.find((t) => t.zone_id === z.id);
+        const rotationOrder = rotation?.member_order ?? [];
+        const pinnableMembers = [
+          ...rotationOrder
+            .map((mid) => memberById(mid))
+            .filter((m): m is NonNullable<typeof m> => Boolean(m)),
+          ...members.filter((m) => !rotationOrder.includes(m.id)),
+        ];
         return (
           <div
             key={z.id}
@@ -155,9 +162,10 @@ export default function ZonesPage() {
                     ? ` (${assignee.display_name})`
                     : ""}
                 </option>
-                {(rotation?.member_order ?? []).map((mid) => (
-                  <option key={mid} value={mid}>
-                    📌 {memberById(mid)?.display_name}
+                {pinnableMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    📌 {m.display_name}
+                    {m.role === "parent" ? " (parent)" : ""}
                   </option>
                 ))}
               </Select>
