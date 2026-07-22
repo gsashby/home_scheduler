@@ -327,25 +327,29 @@ function TaskCard({
         <div className="mt-2">
           {[...task.subtasks]
             .sort((a, b) => a.position - b.position)
-            .map((s) => (
-              <label
-                key={s.id}
-                className="flex items-center gap-2 py-1 pl-1 text-[13.5px]"
-              >
-                <input
-                  type="checkbox"
-                  checked={s.done}
-                  disabled={!(mine || isParent)}
-                  onChange={() =>
-                    call("toggle_subtask", { p_subtask_id: s.id })
-                  }
-                  className="h-4 w-4 accent-green-600"
-                />
-                <span className={s.done ? "text-gray-600 line-through" : ""}>
-                  {s.title}
-                </span>
-              </label>
-            ))}
+            .map((s) => {
+              const nested = /^-\s+/.test(s.title);
+              const title = nested ? s.title.replace(/^-\s+/, "") : s.title;
+              return (
+                <label
+                  key={s.id}
+                  className={`flex items-center gap-2 py-1 text-[13.5px] ${nested ? "pl-6" : "pl-1"}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={s.done}
+                    disabled={!(mine || isParent)}
+                    onChange={() =>
+                      call("toggle_subtask", { p_subtask_id: s.id })
+                    }
+                    className="h-4 w-4 accent-green-600"
+                  />
+                  <span className={s.done ? "text-gray-600 line-through" : ""}>
+                    {title}
+                  </span>
+                </label>
+              );
+            })}
         </div>
       )}
 
@@ -646,12 +650,12 @@ function TaskModal({
           <option value="120">2 hours</option>
         </Select>
       </Field>
-      <Field label="Subtasks (one per line, optional)">
+      <Field label="Subtasks (one per line; start a line with - to nest it under the one above)">
         <TextArea
           rows={3}
           value={subtasksText}
           onChange={(e) => setSubtasksText(e.target.value)}
-          placeholder={"Do 5.1\nDo 5.2"}
+          placeholder={"Do 5.1\n- part a\n- part b\nDo 5.2"}
         />
       </Field>
       <div className="mt-1.5 flex justify-end gap-2">
