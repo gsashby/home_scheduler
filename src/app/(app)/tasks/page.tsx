@@ -31,6 +31,7 @@ export default function TasksPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [filter, setFilter] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function load() {
@@ -200,6 +201,7 @@ export default function TasksPage() {
                   owner={memberById(t.member_id)}
                   call={call}
                   reload={load}
+                  onEdit={() => setEditingTask(t)}
                 />
               ))}
             </div>
@@ -231,17 +233,23 @@ export default function TasksPage() {
       )}
 
       <TaskModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        open={modalOpen || !!editingTask}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingTask(null);
+        }}
         isParent={isParent}
         me={me}
         members={members}
         subjects={subjects}
+        editingTask={editingTask}
         onSaved={(assignedToSelf, memberName) => {
           toast(
-            assignedToSelf
-              ? "Added to your list"
-              : `Task assigned to ${memberName}`,
+            editingTask
+              ? "Task updated"
+              : assignedToSelf
+                ? "Added to your list"
+                : `Task assigned to ${memberName}`,
           );
           load();
         }}
@@ -258,6 +266,7 @@ function TaskCard({
   owner,
   call,
   reload,
+  onEdit,
 }: {
   task: Task;
   subjects: Subject[];
@@ -270,6 +279,7 @@ function TaskCard({
     msg?: string,
   ) => Promise<boolean>;
   reload: () => void;
+  onEdit?: () => void;
 }) {
   const mine = task.member_id === meId;
   const overdue = task.date < todayISO() && task.status === "assigned";
@@ -373,6 +383,11 @@ function TaskCard({
                 ✓ Verify
               </Button>
             )}
+            {task.status !== "verified" && onEdit && (
+              <Button size="sm" variant="secondary" onClick={onEdit}>
+                ✎ Edit
+              </Button>
+            )}
             {task.status === "assigned" && (
               <Button
                 size="sm"
@@ -412,6 +427,11 @@ function TaskCard({
         )}
         {!isParent && canSelfManage && (
           <>
+            {onEdit && (
+              <Button size="sm" variant="secondary" onClick={onEdit}>
+                ✎ Edit
+              </Button>
+            )}
             <Button
               size="sm"
               variant="secondary"
@@ -444,6 +464,7 @@ function TaskModal({
   me,
   members,
   subjects,
+  editingTask,
   onSaved,
 }: {
   open: boolean;
@@ -452,6 +473,7 @@ function TaskModal({
   me: { id: string; display_name: string };
   members: { id: string; display_name: string }[];
   subjects: Subject[];
+  editingTask?: Task | null;
   onSaved: (assignedToSelf: boolean, memberName: string) => void;
 }) {
   const [title, setTitle] = useState("");
@@ -465,15 +487,28 @@ function TaskModal({
 
   useEffect(() => {
     if (open) {
-      setTitle("");
-      setOwnerId(me.id);
-      setCatValue("cat:personal");
-      setDate(todayISO());
-      setDeadline("");
-      setRemind("60");
-      setSubtasksText("");
+      if (editingTask) {
+        setTitle(editingTask.title);
+        setOwnerId(editingTask.member_id);
+        setCatValue(
+          editingTask.category === "school"
+            ? `school:${editingTask.subject_id}`
+            : `cat:${editingTask.category}`,
+        );
+        setDate(editingTask.date);
+        setDeadline(editingTask.deadline?.slice(0, 5) ?? "");
+        setRemind(String(editingTask.remind_minutes));
+      } else {
+        setTitle("");
+        setOwnerId(me.id);
+        setCatValue("cat:personal");
+        setDate(todayISO());
+        setDeadline("");
+        setRemind("60");
+        setSubtasksText("");
+      }
     }
-  }, [open, me.id]);
+  }, [open, me.id, editingTask]);
 
   async function save() {
     if (!title.trim()) return;
@@ -483,6 +518,28 @@ function TaskModal({
     const category: TaskCategory =
       kind === "school" ? "school" : (value as TaskCategory);
     const subjectId = kind === "school" ? value : null;
+
+    if (editingTask) {
+      const { error } = await createClient().rpc("update_task", {
+        p_task_id: editingTask.id,
+        p_title: title.trim(),
+        p_member_id: memberId,
+        p_category: category,
+        p_subject_id: subjectId,
+        p_date: date,
+        p_deadline: deadline || null,
+        p_remind_minutes: Number(remind),
+      });
+      setSaving(false);
+      if (error) return;
+      onClose();
+      onSaved(
+        memberId === me.id,
+        members.find((m) => m.id === memberId)?.display_name ?? "",
+      );
+      return;
+    }
+
     const subtasks = subtasksText
       .split("\n")
       .map((s) => s.trim())
@@ -511,7 +568,9 @@ function TaskModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isParent ? "Assign a task" : "Add my own item"}
+      title={
+        editingTask ? "Edit task" : isParent ? "Assign a task" : "Add my own item"
+      }
     >
       <Field label="Title">
         <TextInput
@@ -581,20 +640,22 @@ function TaskModal({
           <option value="120">2 hours</option>
         </Select>
       </Field>
-      <Field label="Subtasks (one per line, optional)">
-        <TextArea
-          rows={3}
-          value={subtasksText}
-          onChange={(e) => setSubtasksText(e.target.value)}
-          placeholder={"Do 5.1\nDo 5.2"}
-        />
-      </Field>
+      {!editingTask && (
+        <Field label="Subtasks (one per line, optional)">
+          <TextArea
+            rows={3}
+            value={subtasksText}
+            onChange={(e) => setSubtasksText(e.target.value)}
+            placeholder={"Do 5.1\nDo 5.2"}
+          />
+        </Field>
+      )}
       <div className="mt-1.5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
         <Button onClick={save} disabled={saving}>
-          {isParent ? "Assign" : "Add"}
+          {editingTask ? "Save" : isParent ? "Assign" : "Add"}
         </Button>
       </div>
     </Modal>

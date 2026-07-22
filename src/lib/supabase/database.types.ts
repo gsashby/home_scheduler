@@ -504,6 +504,19 @@ export type Database = {
         };
         Returns: string;
       };
+      update_task: {
+        Args: {
+          p_task_id: string;
+          p_title: string;
+          p_member_id: string;
+          p_category: TaskCategory;
+          p_subject_id: string | null;
+          p_date: string;
+          p_deadline: string | null;
+          p_remind_minutes: number | null;
+        };
+        Returns: void;
+      };
       toggle_subtask: { Args: { p_subtask_id: string }; Returns: void };
       mark_task_done: { Args: { p_task_id: string }; Returns: void };
       verify_task: { Args: { p_task_id: string }; Returns: void };
