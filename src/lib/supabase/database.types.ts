@@ -1,6 +1,7 @@
 // Hand-written to match supabase/migrations/20260719000001_init_schema.sql,
 // 20260719130000_family_invites.sql, 20260720000001_multi_tenant_families.sql,
-// and 20260720000002_family_invites_generalize.sql exactly (no live
+// 20260720000002_family_invites_generalize.sql, and
+// 20260722000003_job_claim_return_and_payout_tasks.sql exactly (no live
 // Supabase project to run `supabase gen types` against yet). Once a real
 // project exists, regenerate with:
 //   npx supabase gen types typescript --project-id <project-ref> > src/lib/supabase/database.types.ts
@@ -20,6 +21,7 @@ export type TaskCategory =
   "school" | "work" | "home" | "personal" | "goal" | "zone";
 export type EventSource = "app" | "google";
 export type JobStatus = "open" | "taken" | "done" | "paid";
+export type TaskJobRole = "verify" | "pay";
 export type NotifKind =
   "brief" | "deadline" | "nudge" | "update" | "sync" | "job";
 export type CalendarSharing = "family" | "parents" | "private";
@@ -68,6 +70,7 @@ type CalendarEventsRow = {
   source: EventSource;
   google_calendar_id: string | null;
   google_event_id: string | null;
+  color: string | null;
   created_by: string;
   family_id: string;
   created_at: string;
@@ -125,6 +128,7 @@ type TasksRow = {
   zone_id: string | null;
   zone_cycle: number | null;
   job_id: string | null;
+  job_role: TaskJobRole | null;
   family_id: string;
   created_at: string;
   updated_at: string;
@@ -201,6 +205,7 @@ type GoogleCalendarSubscriptionsRow = {
   family_id: string;
   google_calendar_id: string;
   calendar_name: string;
+  color: string | null;
   enabled: boolean;
   is_export_target: boolean;
   sync_token: string | null;
@@ -530,6 +535,7 @@ export type Database = {
         Returns: string;
       };
       take_job: { Args: { p_job_id: string }; Returns: string };
+      return_job: { Args: { p_job_id: string }; Returns: void };
       job_done: { Args: { p_job_id: string }; Returns: void };
       pay_job: { Args: { p_job_id: string }; Returns: void };
       delete_job: { Args: { p_job_id: string }; Returns: void };

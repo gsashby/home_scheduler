@@ -288,7 +288,8 @@ function TaskCard({
     : null;
   const color = owner?.color ?? "#9ca3af";
 
-  const canSelfManage = mine && task.created_by === meId && !task.zone_id;
+  const canSelfManage =
+    mine && task.created_by === meId && !task.zone_id && !task.job_id;
 
   return (
     <div
@@ -364,11 +365,34 @@ function TaskCard({
               call(
                 "mark_task_done",
                 { p_task_id: task.id },
-                "Nice! Sent to your parents to verify.",
+                task.job_role === "pay"
+                  ? "Paid! 🎉"
+                  : task.job_role === "verify"
+                    ? "Confirmed as satisfactorily completed"
+                    : "Nice! Sent to your parents to verify.",
               )
             }
           >
-            ✓ Mark done
+            {task.job_role === "pay"
+              ? "💰 Pay out"
+              : task.job_role === "verify"
+                ? "✓ Confirm complete"
+                : "✓ Mark done"}
+          </Button>
+        )}
+        {mine && task.job_id && !task.job_role && task.status === "assigned" && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() =>
+              call(
+                "return_job",
+                { p_job_id: task.job_id },
+                "Job returned to the board",
+              )
+            }
+          >
+            ↩ Return job
           </Button>
         )}
         {mine && task.status === "done" && (
@@ -389,12 +413,12 @@ function TaskCard({
                 ✓ Verify
               </Button>
             )}
-            {task.status !== "verified" && onEdit && (
+            {task.status !== "verified" && onEdit && !task.job_role && (
               <Button size="sm" variant="secondary" onClick={onEdit}>
                 ✎ Edit
               </Button>
             )}
-            {task.status === "assigned" && (
+            {task.status === "assigned" && !task.job_role && (
               <Button
                 size="sm"
                 variant="warn"
@@ -409,7 +433,7 @@ function TaskCard({
                 📣 Nudge {owner?.display_name}
               </Button>
             )}
-            {task.status !== "verified" && (
+            {task.status !== "verified" && !task.job_role && (
               <Button
                 size="sm"
                 variant="secondary"
