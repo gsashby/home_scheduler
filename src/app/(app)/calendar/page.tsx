@@ -315,7 +315,8 @@ export default function CalendarPage() {
                         }}
                         className="mb-1 truncate rounded-md px-1.5 py-1 text-[12px] leading-tight font-semibold text-white"
                         style={{
-                          backgroundColor: memberById(e.member_id)?.color,
+                          backgroundColor:
+                            e.color ?? memberById(e.member_id)?.color,
                         }}
                       >
                         {e.all_day ? "All day" : fmtTime(e.start_time)}{" "}
@@ -353,7 +354,8 @@ export default function CalendarPage() {
           </div>
           <div className="mt-1.5 text-xs text-gray-600">
             Tap any day to drill in · tap an event to edit · ☑ = task · G =
-            synced with Google Calendar · +N = also shared with N others
+            synced with Google Calendar (colored by its Google calendar) ·
+            +N = also shared with N others
           </div>
         </>
       )}
@@ -428,7 +430,7 @@ function DayView({
             </div>
             <div
               className="flex-1 rounded-md px-2.5 py-1.5 text-sm font-semibold text-white"
-              style={{ backgroundColor: owner?.color }}
+              style={{ backgroundColor: e.color ?? owner?.color }}
             >
               {e.title}
               {e.source === "google" && <Tag tone="green">Google</Tag>}

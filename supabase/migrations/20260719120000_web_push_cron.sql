@@ -62,6 +62,22 @@ begin
   end if;
 end $$;
 
+-- The placeholder above is silently fatal: every net.http_post call that
+-- reads this secret (send-push here, google-calendar-sync in a later
+-- migration) gets a 401 from the gateway with nothing in the Edge Function
+-- logs, since the request never reaches the function. Re-raise this
+-- warning on every migration run (fresh db reset, redeploy, etc) until
+-- someone rotates it, instead of leaving that failure mode silent.
+do $$
+declare
+  v_secret text;
+begin
+  select decrypted_secret into v_secret from vault.decrypted_secrets where name = 'supabase_secret_key';
+  if v_secret = 'REPLACE_ME' then
+    raise warning 'supabase_secret_key vault secret is still the REPLACE_ME placeholder — net.http_post calls (send-push, google-calendar-sync) will 401 at the gateway until you run: select vault.update_secret((select id from vault.secrets where name = ''supabase_secret_key''), ''<real sb_secret_... key>'');';
+  end if;
+end $$;
+
 -- ---------------------------------------------------------------------------
 -- Fire-and-forget HTTP call to the send-push Edge Function whenever a
 -- notification row is created. The function itself looks up

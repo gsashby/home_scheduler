@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/lib/toast";
-import { Button, Card, Empty, Tag } from "@/components/ui";
+import { Button, Card, Empty, Swatch, Tag } from "@/components/ui";
 import type { Profile } from "@/lib/family-context";
 
 interface GoogleCalendarOption {
   id: string;
   name: string;
   primary: boolean;
+  color?: string | null;
   enabled: boolean;
   is_export_target: boolean;
 }
@@ -151,7 +152,10 @@ export function GoogleCalendarCard({ me }: { me: Profile }) {
                   {calendars.map((cal) => (
                     <tr key={cal.id}>
                       <td className="border-b border-gray-200 px-1.5 py-2">
-                        {cal.name}{" "}
+                        <span className="inline-flex items-center gap-1.5">
+                          {cal.color && <Swatch color={cal.color} />}
+                          {cal.name}
+                        </span>{" "}
                         {cal.primary && <Tag tone="green">primary</Tag>}
                       </td>
                       <td className="border-b border-gray-200 px-1.5 py-2">

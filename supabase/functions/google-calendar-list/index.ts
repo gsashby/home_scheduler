@@ -18,6 +18,7 @@ interface GoogleCalendarListEntry {
   id: string;
   summary?: string;
   primary?: boolean;
+  backgroundColor?: string;
 }
 
 async function fetchAllCalendars(
@@ -87,6 +88,7 @@ export default {
         id: cal.id,
         name: cal.summary ?? cal.id,
         primary: cal.primary ?? false,
+        color: cal.backgroundColor ?? null,
         enabled: existing?.enabled ?? false,
         is_export_target: existing?.is_export_target ?? false,
       };

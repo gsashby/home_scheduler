@@ -10,6 +10,7 @@ const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 interface CalendarSelection {
   id: string;
   name: string;
+  color?: string | null;
   enabled: boolean;
   is_export_target: boolean;
 }
@@ -97,6 +98,7 @@ export default {
             family_id: profile.family_id,
             google_calendar_id: cal.id,
             calendar_name: cal.name,
+            color: cal.color ?? null,
             enabled: cal.enabled,
             is_export_target: cal.is_export_target,
           },

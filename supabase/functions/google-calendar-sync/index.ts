@@ -20,6 +20,44 @@ import {
 } from "../_shared/google-calendar-time.ts";
 
 const EVENTS_BASE = "https://www.googleapis.com/calendar/v3/calendars";
+const CALENDAR_LIST_URL =
+  "https://www.googleapis.com/calendar/v3/users/me/calendarList";
+
+// Each Google calendar's own display color (calendarList.backgroundColor),
+// keyed by calendar id, so imported events can be color-coded by source
+// calendar instead of only by member. One list call per profile per sync
+// run — cheap next to the per-calendar events.list calls below.
+async function fetchCalendarColors(
+  accessToken: string,
+): Promise<Map<string, string>> {
+  const colors = new Map<string, string>();
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL(CALENDAR_LIST_URL);
+    url.searchParams.set("maxResults", "250");
+    url.searchParams.set("fields", "items(id,backgroundColor),nextPageToken");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      console.error("Failed to fetch calendar colors:", await res.text());
+      return colors;
+    }
+    const body = (await res.json()) as {
+      items?: { id: string; backgroundColor?: string }[];
+      nextPageToken?: string;
+    };
+    for (const item of body.items ?? []) {
+      if (item.backgroundColor) colors.set(item.id, item.backgroundColor);
+    }
+    pageToken = body.nextPageToken;
+  } while (pageToken);
+
+  return colors;
+}
 
 interface GoogleEvent {
   id: string;
@@ -91,6 +129,7 @@ async function importSubscription(
   supabaseAdmin: any,
   accessToken: string,
   sub: SubscriptionRow,
+  color: string | null,
 ): Promise<void> {
   let result = await listGoogleEvents(
     accessToken,
@@ -134,13 +173,17 @@ async function importSubscription(
       p_date: date,
       p_start_time: startTime,
       p_end_time: endTime,
+      p_color: color,
     });
   }
 
-  if (result.nextSyncToken) {
+  const subUpdate: Record<string, unknown> = {};
+  if (result.nextSyncToken) subUpdate.sync_token = result.nextSyncToken;
+  if (color !== null) subUpdate.color = color;
+  if (Object.keys(subUpdate).length > 0) {
     await supabaseAdmin
       .from("google_calendar_subscriptions")
-      .update({ sync_token: result.nextSyncToken })
+      .update(subUpdate)
       .eq("id", sub.id);
   }
 }
@@ -278,12 +321,25 @@ export default {
       (profiles ?? []).filter((p) => p.google_sync_enabled).map((p) => p.id),
     );
 
+    const colorCache = new Map<string, Map<string, string>>();
+    async function colorsFor(
+      profileId: string,
+      accessToken: string,
+    ): Promise<Map<string, string>> {
+      if (colorCache.has(profileId)) return colorCache.get(profileId)!;
+      const colors = await fetchCalendarColors(accessToken);
+      colorCache.set(profileId, colors);
+      return colors;
+    }
+
     let imported = 0;
     for (const sub of subs ?? []) {
       if (!syncEnabled.has(sub.profile_id)) continue;
       const token = await accessTokenFor(sub.profile_id);
       if (!token) continue;
-      await importSubscription(ctx.supabaseAdmin, token, sub);
+      const colors = await colorsFor(sub.profile_id, token);
+      const color = colors.get(sub.google_calendar_id) ?? null;
+      await importSubscription(ctx.supabaseAdmin, token, sub, color);
       imported++;
     }
 
