@@ -68,6 +68,14 @@ the same family (kids need names/colors to render everyone's calendar).
 **RPC only** for writes — no direct client writes to role/color/family
 membership.
 
+Two table-level triggers enforce "a family always has at least one
+parent and at least one admin," regardless of which write path (present
+or future RPC, a manual fix) attempts to violate it:
+`prevent_last_admin_demotion()` (`before update of family_member_role`)
+and the equivalent guard inside `set_member_role()` itself (there being
+no separate `family_member_role`-changing RPC to hang a trigger-free
+guard off yet — see `07-project-status.md`).
+
 ### `subjects`
 
 Parent-customizable school subjects, scoped by `family_id`. Deleting one

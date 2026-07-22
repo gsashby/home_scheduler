@@ -214,6 +214,25 @@ first"`. Both applied to and verified against the real project — the
    kid" on the only member) and confirming both the blocked role change
    and the exact error text live in the browser, then cleaning up the
    test account/family afterward.
+9. **Same invariant, requested proactively for `family_member_role`
+   (admin/member) — not a live bug.** Unlike `role`, there's no RPC that
+   changes `family_member_role` after initial assignment today (only
+   `create_family()`/`_join_family()`/`handle_new_user()` set it, once,
+   at creation/join time) and Settings only _displays_ the admin tag, it
+   never offers a way to change it — so there was no reachable path to
+   actually strand a family with zero admins. Added anyway, as a
+   database-level trigger rather than an RPC-level check (there's no
+   single RPC to put it in yet):
+   `prevent_last_admin_demotion()`/`profiles_prevent_last_admin_demotion`
+   (`20260721000003_prevent_last_admin_demotion.sql`), so _any_ future
+   write path — a "transfer admin" feature, a manual fix — inherits the
+   protection automatically. Verified live against the real project two
+   ways: confirmed `create_family()`'s legitimate member→admin promotion
+   still works (signed up a fresh test account, created a family,
+   succeeded normally), then confirmed the trigger blocks a demotion even
+   from a service-role write that bypasses RLS entirely — a stronger
+   test than the `role` guard got, since triggers fire regardless of
+   caller privilege. Test account/family cleaned up afterward.
 
 ## Resolved since the previous snapshot (2026-07-20)
 
