@@ -19,10 +19,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   const tabs = [
     { href: "/", label: "Today" },
-    { href: "/calendar", label: "Calendar" },
     { href: "/tasks", label: "Tasks" },
-    ...(isParent ? [{ href: "/zones", label: "Zones" }] : []),
+    { href: "/calendar", label: "Calendar" },
     { href: "/jobs", label: "Job Board" },
+    ...(isParent ? [{ href: "/zones", label: "Zones" }] : []),
     ...(isParent ? [{ href: "/settings", label: "Settings" }] : []),
   ];
 
