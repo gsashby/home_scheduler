@@ -21,6 +21,17 @@ import {
 
 const EVENTS_BASE = "https://www.googleapis.com/calendar/v3/calendars";
 
+// How far back a first (full) sync reaches. Google's incremental syncToken
+// keeps it current after that. The initial import previously used
+// timeMin = now, which silently dropped every event that had already
+// started — so a freshly-connected, already-populated calendar imported
+// almost nothing this week and nothing earlier, which reads exactly as
+// "my Google events don't show". A bounded lookback (rather than no
+// timeMin at all) still keeps the first sync from expanding years of
+// recurring-event history into singleEvents instances.
+const IMPORT_LOOKBACK_DAYS = 60;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 interface GoogleEvent {
   id: string;
   status?: string;
@@ -53,7 +64,10 @@ async function listGoogleEvents(
     if (syncToken) {
       url.searchParams.set("syncToken", syncToken);
     } else {
-      url.searchParams.set("timeMin", new Date().toISOString());
+      url.searchParams.set(
+        "timeMin",
+        new Date(Date.now() - IMPORT_LOOKBACK_DAYS * DAY_MS).toISOString(),
+      );
     }
     if (pageToken) url.searchParams.set("pageToken", pageToken);
 
@@ -113,10 +127,18 @@ async function importSubscription(
 
   for (const item of result.items) {
     if (item.status === "cancelled") {
-      await supabaseAdmin.rpc("sync_delete_imported_event", {
+      const { error } = await supabaseAdmin.rpc("sync_delete_imported_event", {
         p_google_calendar_id: sub.google_calendar_id,
         p_google_event_id: item.id,
       });
+      if (error) {
+        // Previously swallowed — a failing write here looked identical to
+        // "nothing to import", making a broken sync impossible to diagnose.
+        console.error(
+          `sync_delete_imported_event failed for ${sub.google_calendar_id}/${item.id}:`,
+          error.message,
+        );
+      }
       continue;
     }
     if (!item.start || !item.end) continue; // defensive — malformed event
@@ -125,7 +147,7 @@ async function importSubscription(
       item.start,
       item.end,
     );
-    await supabaseAdmin.rpc("sync_upsert_imported_event", {
+    const { error } = await supabaseAdmin.rpc("sync_upsert_imported_event", {
       p_family_id: sub.family_id,
       p_member_id: sub.profile_id,
       p_google_calendar_id: sub.google_calendar_id,
@@ -135,6 +157,12 @@ async function importSubscription(
       p_start_time: startTime,
       p_end_time: endTime,
     });
+    if (error) {
+      console.error(
+        `sync_upsert_imported_event failed for ${sub.google_calendar_id}/${item.id}:`,
+        error.message,
+      );
+    }
   }
 
   if (result.nextSyncToken) {
